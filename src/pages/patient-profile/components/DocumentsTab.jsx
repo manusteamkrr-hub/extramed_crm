@@ -1,0 +1,197 @@
+import React, { useState } from 'react';
+import Icon from '../../../components/AppIcon';
+import Button from '../../../components/ui/Button';
+
+const DocumentsTab = ({ documents, onUpload, patient, medicalHistory }) => {
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+
+  const categories = [
+    { value: 'all', label: 'Все документы', icon: 'Files' },
+    { value: 'medical', label: 'Медицинские записи', icon: 'FileText' },
+    { value: 'laboratory', label: 'Лабораторные анализы', icon: 'FlaskConical' },
+    { value: 'imaging', label: 'Снимки и изображения', icon: 'Image' },
+    { value: 'consent', label: 'Согласия', icon: 'FileCheck' },
+    { value: 'other', label: 'Прочее', icon: 'File' },
+  ];
+
+  const getDocumentIcon = (type) => {
+    switch (type) {
+      case 'pdf':
+        return { name: 'FileText', color: 'var(--color-error)' };
+      case 'image':
+        return { name: 'Image', color: 'var(--color-primary)' };
+      case 'document':
+        return { name: 'FileText', color: 'var(--color-success)' };
+      default:
+        return { name: 'File', color: 'var(--color-muted-foreground)' };
+    }
+  };
+
+  const filteredDocuments = selectedCategory === 'all' 
+    ? documents 
+    : documents?.filter(doc => doc?.category === selectedCategory);
+
+  const handleFileUpload = (e) => {
+    const files = Array.from(e?.target?.files);
+    if (onUpload) {
+      onUpload(files);
+    }
+  };
+
+  const handlePrintMedicalRecord = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Пожалуйста, разрешите всплывающие окна для печати');
+      return;
+    }
+
+    // Import and render the template
+    import('../../../components/MedicalRecordPrintTemplate')?.then(({ default: MedicalRecordPrintTemplate }) => {
+      const { createRoot } = require('react-dom/client');
+      const container = printWindow?.document?.createElement('div');
+      printWindow?.document?.body?.appendChild(container);
+      
+      const root = createRoot(container);
+      root.render(
+        React.createElement(MedicalRecordPrintTemplate, {
+          patient: patient,
+          medicalHistory: medicalHistory,
+          admissionDate: new Date()?.toISOString(),
+          dischargeDate: null
+        })
+      );
+
+      // Wait for content to render, then print
+      setTimeout(() => {
+        printWindow.document.title = `Медицинская карта ${patient?.medicalRecordNumber || patient?.id || ''}`;
+        printWindow?.print();
+      }, 500);
+    });
+  };
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h2 className="text-lg md:text-xl font-heading font-semibold text-foreground">
+          Документы пациента
+        </h2>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            iconName="Printer"
+            iconPosition="left"
+            onClick={handlePrintMedicalRecord}
+          >
+            Печать по шаблону
+          </Button>
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              multiple
+              onChange={handleFileUpload}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            />
+            <Button
+              variant="default"
+              size="sm"
+              iconName="Upload"
+              iconPosition="left"
+              asChild
+            >
+              Загрузить документ
+            </Button>
+          </label>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {categories?.map((category) => (
+          <button
+            key={category?.value}
+            onClick={() => setSelectedCategory(category?.value)}
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-caption
+              transition-smooth
+              ${selectedCategory === category?.value
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card border border-border text-foreground hover:bg-muted'
+              }
+            `}
+          >
+            <Icon 
+              name={category?.icon} 
+              size={16} 
+              color={selectedCategory === category?.value ? 'var(--color-primary-foreground)' : 'var(--color-foreground)'} 
+            />
+            <span>{category?.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredDocuments?.map((document, index) => {
+          const icon = getDocumentIcon(document?.type);
+          return (
+            <div key={index} className="bg-card border border-border rounded-lg p-4 hover:elevation-md transition-smooth">
+              <div className="flex items-start gap-3 mb-3">
+                <div
+                  className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `${icon?.color}15` }}
+                >
+                  <Icon name={icon?.name} size={24} color={icon?.color} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm md:text-base font-body font-medium text-foreground mb-1 truncate">
+                    {document?.name}
+                  </p>
+                  <p className="text-xs caption text-muted-foreground">
+                    {document?.size}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-2 text-xs caption text-muted-foreground">
+                  <Icon name="Calendar" size={14} />
+                  <span>{document?.uploadDate}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs caption text-muted-foreground">
+                  <Icon name="User" size={14} />
+                  <span>{document?.uploadedBy}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  iconName="Eye"
+                  fullWidth
+                >
+                  Просмотр
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  iconName="Download"
+                  fullWidth
+                >
+                  Скачать
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {filteredDocuments?.length === 0 && (
+        <div className="bg-card border border-border rounded-lg p-8 text-center">
+          <Icon name="FileX" size={48} color="var(--color-muted-foreground)" className="mx-auto mb-4" />
+          <p className="text-sm md:text-base caption text-muted-foreground">
+            Нет документов в выбранной категории
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DocumentsTab;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../../components/navigation/Sidebar';
-import Header from '../../components/navigation/Header';
+import { motion } from 'framer-motion';
+
+
 import Icon from '../../components/AppIcon';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -10,6 +11,8 @@ import ReportFilterPanel from './components/ReportFilterPanel';
 import ReportViewer from './components/ReportViewer';
 import KPIWidget from './components/KPIWidget';
 import reportsService from '../../services/reportsService';
+import { pageVariants, pageTransition } from '../../config/animations';
+import Layout from '../../components/navigation/Layout';
 
 const ReportsDashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -75,12 +78,6 @@ const ReportsDashboard = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  const handleRoleChange = (newRole) => {
-    setCurrentRole(newRole);
-    setSelectedCategory('financial');
-    setSelectedReport(null);
-  };
-
   const handleCategorySelect = (categoryId) => {
     setSelectedCategory(categoryId);
     setSelectedReport(null);
@@ -121,6 +118,10 @@ const ReportsDashboard = () => {
     console.log(`Toggling favorite for report ${reportId}`);
   };
 
+  const handleRoleChange = (newRole) => {
+    setCurrentRole(newRole);
+  };
+
   const filteredCategories = reportCategories?.filter((cat) =>
     cat?.allowedRoles?.includes(currentRole)
   );
@@ -155,152 +156,145 @@ const ReportsDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} />
-      <div
-        className={`transition-smooth ${
-          isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-60'
-        }`}
+    <Layout userRole={currentRole} onRoleChange={handleRoleChange}>
+      <motion.div
+        className="p-4 md:p-6 lg:p-8"
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        variants={pageVariants}
+        transition={pageTransition}
       >
-        <Header
-          userRole={currentRole}
-          onRoleChange={handleRoleChange}
-          onActionClick={(action) => console.log('Action:', action)}
-          onPatientSelect={() => {}}
-        />
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-heading font-semibold text-foreground mb-2">
+            Отчеты и аналитика
+          </h1>
+          <p className="text-sm md:text-base caption text-muted-foreground">
+            Комплексная аналитика и финансовая отчетность для принятия решений
+          </p>
+        </div>
 
-        <main className="p-4 md:p-6 lg:p-8">
-          <div className="mb-6 md:mb-8">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-heading font-semibold text-foreground mb-2">
-              Отчеты и аналитика
-            </h1>
-            <p className="text-sm md:text-base caption text-muted-foreground">
-              Комплексная аналитика и финансовая отчетность для принятия решений
-            </p>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+          {kpiData?.map((kpi, index) => (
+            <KPIWidget key={index} {...kpi} />
+          ))}
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-            {kpiData?.map((kpi, index) => (
-              <KPIWidget key={index} {...kpi} />
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
-            <div className="lg:col-span-3 space-y-4">
-              <div className="bg-card border border-border rounded-lg p-4 elevation-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-heading font-semibold text-foreground text-base md:text-lg">
-                    Категории отчетов
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    iconName="Settings"
-                    onClick={() => console.log('Settings')}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+          <div className="lg:col-span-3 space-y-4">
+            <div className="bg-card border border-border rounded-lg p-4 elevation-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-heading font-semibold text-foreground text-base md:text-lg">
+                  Категории отчетов
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconName="Settings"
+                  onClick={() => console.log('Settings')}
+                />
+              </div>
+              <div className="space-y-2">
+                {filteredCategories?.map((category) => (
+                  <ReportCategoryCard
+                    key={category?.id}
+                    category={category}
+                    isActive={selectedCategory === category?.id}
+                    onClick={() => handleCategorySelect(category?.id)}
                   />
-                </div>
-                <div className="space-y-2">
-                  {filteredCategories?.map((category) => (
-                    <ReportCategoryCard
-                      key={category?.id}
-                      category={category}
-                      isActive={selectedCategory === category?.id}
-                      onClick={() => handleCategorySelect(category?.id)}
-                    />
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-lg p-4 elevation-sm">
+              <h3 className="font-heading font-semibold text-foreground mb-3 text-sm md:text-base">
+                Избранные отчеты
+              </h3>
+              <div className="space-y-2">
+                {currentReports?.filter((r) => r?.isFavorite)?.slice(0, 3)?.map((report) => (
+                    <button
+                      key={report?.id}
+                      onClick={() => handleReportSelect(report)}
+                      className="w-full text-left p-2 rounded-lg hover:bg-muted transition-smooth"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon name="Star" size={14} color="var(--color-warning)" className="fill-current flex-shrink-0" />
+                        <span className="text-xs md:text-sm font-body text-foreground truncate">
+                          {report?.name}
+                        </span>
+                      </div>
+                    </button>
                   ))}
-                </div>
-              </div>
-
-              <div className="bg-card border border-border rounded-lg p-4 elevation-sm">
-                <h3 className="font-heading font-semibold text-foreground mb-3 text-sm md:text-base">
-                  Избранные отчеты
-                </h3>
-                <div className="space-y-2">
-                  {currentReports?.filter((r) => r?.isFavorite)?.slice(0, 3)?.map((report) => (
-                      <button
-                        key={report?.id}
-                        onClick={() => handleReportSelect(report)}
-                        className="w-full text-left p-2 rounded-lg hover:bg-muted transition-smooth"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Icon name="Star" size={14} color="var(--color-warning)" className="fill-current flex-shrink-0" />
-                          <span className="text-xs md:text-sm font-body text-foreground truncate">
-                            {report?.name}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-3 space-y-4">
-              <div className="bg-card border border-border rounded-lg p-4 elevation-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-heading font-semibold text-foreground text-base md:text-lg">
-                    Список отчетов
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    iconName={showFilters ? 'X' : 'Filter'}
-                    onClick={() => setShowFilters(!showFilters)}
-                  />
-                </div>
-
-                <Input
-                  type="search"
-                  placeholder="Поиск отчетов..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e?.target?.value)}
-                  className="mb-4"
-                />
-
-                <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                  {filteredReports?.length > 0 ? (
-                    filteredReports?.map((report) => (
-                      <ReportListItem
-                        key={report?.id}
-                        report={report}
-                        onSelect={handleReportSelect}
-                        isActive={selectedReport?.id === report?.id}
-                      />
-                    ))
-                  ) : (
-                    <div className="text-center py-8">
-                      <Icon name="SearchX" size={32} color="var(--color-muted-foreground)" className="mx-auto mb-2" />
-                      <p className="text-sm caption text-muted-foreground">
-                        Отчеты не найдены
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {showFilters && (
-                <ReportFilterPanel
-                  filters={filters}
-                  onFilterChange={handleFilterChange}
-                  onApply={handleApplyFilters}
-                  onReset={handleResetFilters}
-                />
-              )}
-            </div>
-
-            <div className="lg:col-span-6">
-              <div className="bg-card border border-border rounded-lg p-4 md:p-6 elevation-sm min-h-[600px]">
-                <ReportViewer
-                  report={selectedReport}
-                  filters={filters}
-                  onExport={handleExport}
-                  onSchedule={handleSchedule}
-                />
               </div>
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+
+          <div className="lg:col-span-3 space-y-4">
+            <div className="bg-card border border-border rounded-lg p-4 elevation-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-heading font-semibold text-foreground text-base md:text-lg">
+                  Список отчетов
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconName={showFilters ? 'X' : 'Filter'}
+                  onClick={() => setShowFilters(!showFilters)}
+                />
+              </div>
+
+              <Input
+                type="search"
+                placeholder="Поиск отчетов..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e?.target?.value)}
+                className="mb-4"
+              />
+
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {filteredReports?.length > 0 ? (
+                  filteredReports?.map((report) => (
+                    <ReportListItem
+                      key={report?.id}
+                      report={report}
+                      onSelect={handleReportSelect}
+                      isActive={selectedReport?.id === report?.id}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Icon name="SearchX" size={32} color="var(--color-muted-foreground)" className="mx-auto mb-2" />
+                    <p className="text-sm caption text-muted-foreground">
+                      Отчеты не найдены
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {showFilters && (
+              <ReportFilterPanel
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onApply={handleApplyFilters}
+                onReset={handleResetFilters}
+              />
+            )}
+          </div>
+
+          <div className="lg:col-span-6">
+            <div className="bg-card border border-border rounded-lg p-4 md:p-6 elevation-sm min-h-[600px]">
+              <ReportViewer
+                report={selectedReport}
+                filters={filters}
+                onExport={handleExport}
+                onSchedule={handleSchedule}
+              />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </Layout>
   );
 };
 

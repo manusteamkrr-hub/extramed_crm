@@ -1,5 +1,6 @@
 import React from "react";
-import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
+import { BrowserRouter, Routes as RouterRoutes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
 import NotFound from "pages/NotFound";
@@ -11,13 +12,14 @@ import EstimateCreationAndManagement from './pages/estimate-creation-and-managem
 import ReportsDashboard from './pages/reports-dashboard';
 import InpatientJournal from './pages/inpatient-journal';
 import PatientDirectory from './pages/patient-directory';
+import StaffDirectory from './pages/staff-directory';
 
-const Routes = () => {
+const AnimatedRoutes = () => {
+  const location = useLocation();
+
   return (
-    <BrowserRouter>
-      <ErrorBoundary>
-      <ScrollToTop />
-      <RouterRoutes>
+    <AnimatePresence mode="wait">
+      <RouterRoutes location={location} key={location?.pathname}>
         {/* Define your route here */}
         <Route path="/login-screen" element={<LoginScreen />} />
         <Route path="/registration-screen" element={<RegistrationScreen />} />
@@ -29,8 +31,19 @@ const Routes = () => {
         <Route path="/reports-dashboard" element={<ReportsDashboard />} />
         <Route path="/inpatient-journal" element={<InpatientJournal />} />
         <Route path="/patient-directory" element={<PatientDirectory />} />
+        <Route path="/staff-directory" element={<StaffDirectory />} />
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
+    </AnimatePresence>
+  );
+};
+
+const Routes = () => {
+  return (
+    <BrowserRouter>
+      <ErrorBoundary>
+        <ScrollToTop />
+        <AnimatedRoutes />
       </ErrorBoundary>
     </BrowserRouter>
   );

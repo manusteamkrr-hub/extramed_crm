@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import Sidebar from '../../components/navigation/Sidebar';
-import Header from '../../components/navigation/Header';
+
+
+
 import PatientHeader from './components/PatientHeader';
 import DemographicsTab from './components/DemographicsTab';
 import MedicalHistoryTab from './components/MedicalHistoryTab';
@@ -12,8 +13,11 @@ import Icon from '../../components/AppIcon';
 import patientService from '../../services/patientService';
 import medicalHistoryService from '../../services/medicalHistoryService';
 import estimateService from '../../services/estimateService';
+import realtimeSyncService from '../../services/realtimeSync';
 
-const PatientProfile = () => {
+
+
+export default function PatientProfile() {
   const location = useLocation();
   const { patientId: urlPatientId } = useParams();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -27,6 +31,42 @@ const PatientProfile = () => {
 
   // Get patient ID from URL params first, then fall back to location state
   const patientId = urlPatientId || location?.state?.patientId || 'default-patient-id';
+
+  // ✅ NEW: Set up real-time sync listeners
+  useEffect(() => {
+    if (!patientId) return;
+
+    console.log('🔄 Setting up real-time sync listeners for patient profile');
+    
+    // Subscribe to patient changes
+    const unsubscribePatients = realtimeSyncService?.subscribe('patients', (event) => {
+      console.log('📡 Patients sync event:', event);
+      if (event?.data?.id === patientId || event?.action === 'update') {
+        loadPatientData();
+      }
+    });
+
+    // Subscribe to estimate changes for this patient
+    const unsubscribeEstimates = realtimeSyncService?.subscribe('estimates', (event) => {
+      console.log('📡 Estimates sync event:', event);
+      if (event?.data?.patientId === patientId) {
+        loadPatientData();
+      }
+    });
+
+    // Subscribe to financial summary changes
+    const unsubscribeFinancial = realtimeSyncService?.subscribe('financial_summary', (event) => {
+      console.log('📡 Financial summary sync event:', event);
+      loadPatientData();
+    });
+
+    // Cleanup subscriptions
+    return () => {
+      unsubscribePatients();
+      unsubscribeEstimates();
+      unsubscribeFinancial();
+    };
+  }, [patientId]);
 
   useEffect(() => {
     loadPatientData();
@@ -59,7 +99,8 @@ const PatientProfile = () => {
         passportSeries: p?.passport_series,
         passportNumber: p?.passport_number,
         insuranceCompany: p?.insurance_company,
-        insurancePolicy: p?.insurance_policy
+        insurancePolicy: p?.insurance_policy,
+        attendingPhysicianId: p?.attending_physician_id || ''
       });
     }
 
@@ -227,14 +268,24 @@ const PatientProfile = () => {
     if (patient?.id) {
       const result = await patientService?.updatePatient(patient?.id, {
         name: data?.fullName,
+        date_of_birth: data?.dateOfBirth,
         phone: data?.phone,
         email: data?.email,
         address: data?.address,
         emergency_contact: data?.emergencyContact,
-        emergency_phone: data?.emergencyPhone
+        emergency_phone: data?.emergencyPhone,
+        passport_series: data?.passportSeries,
+        passport_number: data?.passportNumber,
+        insurance_company: data?.insuranceCompany,
+        insurance_policy: data?.insurancePolicy,
+        attending_physician_id: data?.attendingPhysicianId
       });
       if (result?.success) {
-        loadPatientData();
+        await loadPatientData();
+        setIsEditingDemographics(false);
+        alert('Данные пациента успешно обновлены');
+      } else {
+        alert('Ошибка при обновлении данных: ' + (result?.error || 'Неизвестная ошибка'));
       }
     }
   };
@@ -259,10 +310,13 @@ const PatientProfile = () => {
         description: diagnosis?.description,
         diagnosed_date: diagnosis?.diagnosedDate,
         physician: diagnosis?.physician,
-        is_primary: diagnosis?.isPrimary
+        is_primary: diagnosis?.isPrimary || false
       });
       if (result?.success) {
-        loadPatientData();
+        await loadPatientData();
+        alert('Диагноз успешно добавлен');
+      } else {
+        alert('Ошибка при добавлении диагноза: ' + (result?.error || 'Неизвестная ошибка'));
       }
     }
   };
@@ -274,12 +328,15 @@ const PatientProfile = () => {
         name: medication?.name,
         dosage: medication?.dosage,
         start_date: medication?.startDate,
-        end_date: medication?.endDate,
+        end_date: medication?.endDate || null,
         prescribed_by: medication?.prescribedBy,
-        is_active: medication?.isActive
+        is_active: medication?.isActive !== false
       });
       if (result?.success) {
-        loadPatientData();
+        await loadPatientData();
+        alert('Медикамент успешно добавлен');
+      } else {
+        alert('Ошибка при добавлении медикамента: ' + (result?.error || 'Неизвестная ошибка'));
       }
     }
   };
@@ -293,7 +350,10 @@ const PatientProfile = () => {
         severity: allergy?.severity
       });
       if (result?.success) {
-        loadPatientData();
+        await loadPatientData();
+        alert('Аллергия успешно добавлена');
+      } else {
+        alert('Ошибка при добавлении аллергии: ' + (result?.error || 'Неизвестная ошибка'));
       }
     }
   };
@@ -312,98 +372,84 @@ const PatientProfile = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      <Sidebar isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} />
-      <div className={`flex-1 flex flex-col transition-smooth ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-60'}`}>
-        <Header
-          userRole={currentRole}
-          onRoleChange={handleRoleChange}
-          onPatientSelect={handlePatientSelect}
-          onActionClick={handleActionClick} />
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+        <PatientHeader patient={displayPatient} onEdit={handlePatientEdit} />
 
+        <div className="bg-card border border-border rounded-lg overflow-hidden elevation-sm">
+          <div className="border-b border-border overflow-x-auto">
+            <div className="flex min-w-max">
+              {tabs?.map((tab) =>
+              <button
+                key={tab?.id}
+                onClick={() => setActiveTab(tab?.id)}
+                className={`
+                    flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 text-sm md:text-base font-body font-medium
+                    transition-smooth border-b-2 whitespace-nowrap
+                    ${activeTab === tab?.id ?
+              'text-primary border-primary bg-primary/5' : 'text-muted-foreground border-transparent hover:text-foreground hover:bg-muted'}
+                  `
+              }>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
-            <PatientHeader patient={displayPatient} onEdit={handlePatientEdit} />
+                <Icon
+                name={tab?.icon}
+                size={18}
+                color={activeTab === tab?.id ? 'var(--color-primary)' : 'var(--color-muted-foreground)'} />
 
-            <div className="bg-card border border-border rounded-lg overflow-hidden elevation-sm">
-              <div className="border-b border-border overflow-x-auto">
-                <div className="flex min-w-max">
-                  {tabs?.map((tab) =>
-                  <button
-                    key={tab?.id}
-                    onClick={() => setActiveTab(tab?.id)}
-                    className={`
-                        flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 text-sm md:text-base font-body font-medium
-                        transition-smooth border-b-2 whitespace-nowrap
-                        ${activeTab === tab?.id ?
-                    'text-primary border-primary bg-primary/5' : 'text-muted-foreground border-transparent hover:text-foreground hover:bg-muted'}
-                      `
-                    }>
-
-                      <Icon
-                      name={tab?.icon}
-                      size={18}
-                      color={activeTab === tab?.id ? 'var(--color-primary)' : 'var(--color-muted-foreground)'} />
-
-                      <span>{tab?.label}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-4 md:p-6 lg:p-8">
-                {loading ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">Загрузка данных...</p>
-                  </div>
-                ) : (
-                  <>
-                    {activeTab === 'demographics' &&
-                    <DemographicsTab 
-                      patient={displayPatient} 
-                      onSave={handleDemographicsSave}
-                      onPhotoUpdate={handlePhotoUpdate}
-                      isEditingFromHeader={isEditingDemographics}
-                      onEditComplete={() => setIsEditingDemographics(false)}
-                    />
-                    }
-                    {activeTab === 'medical' &&
-                    <MedicalHistoryTab
-                      medicalHistory={displayMedicalHistory}
-                      onAddDiagnosis={handleAddDiagnosis}
-                      onAddMedication={handleAddMedication}
-                      onAddAllergy={handleAddAllergy} />
-
-                    }
-                    {activeTab === 'timeline' &&
-                    <TreatmentTimelineTab timeline={mockTimeline} />
-                    }
-                    {activeTab === 'financial' &&
-                    <FinancialSummaryTab 
-                      financialData={displayFinancialData} 
-                      userRole={currentRole} 
-                      patientId={patientId}
-                      onEstimateCreated={handleEstimateCreated}
-                    />
-                    }
-                    {activeTab === 'documents' &&
-                    <DocumentsTab 
-                      documents={mockDocuments} 
-                      onUpload={handleDocumentUpload}
-                      patient={displayPatient}
-                      medicalHistory={displayMedicalHistory}
-                    />
-                    }
-                  </>
-                )}
-              </div>
+                <span>{tab?.label}</span>
+              </button>
+              )}
             </div>
           </div>
-        </main>
+
+          <div className="p-4 md:p-6 lg:p-8">
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Загрузка данных...</p>
+              </div>
+            ) : (
+              <>
+                {activeTab === 'demographics' &&
+                <DemographicsTab 
+                  patient={displayPatient} 
+                  onSave={handleDemographicsSave}
+                  onPhotoUpdate={handlePhotoUpdate}
+                  isEditingFromHeader={isEditingDemographics}
+                  onEditComplete={() => setIsEditingDemographics(false)}
+                />
+                }
+                {activeTab === 'medical' &&
+                <MedicalHistoryTab
+                  medicalHistory={displayMedicalHistory}
+                  onAddDiagnosis={handleAddDiagnosis}
+                  onAddMedication={handleAddMedication}
+                  onAddAllergy={handleAddAllergy} />
+
+                }
+                {activeTab === 'timeline' &&
+                <TreatmentTimelineTab timeline={mockTimeline} />
+                }
+                {activeTab === 'financial' &&
+                <FinancialSummaryTab 
+                  financialData={displayFinancialData} 
+                  userRole={currentRole} 
+                  patientId={patientId}
+                  onEstimateCreated={handleEstimateCreated}
+                />
+                }
+                {activeTab === 'documents' &&
+                <DocumentsTab 
+                  documents={mockDocuments} 
+                  onUpload={handleDocumentUpload}
+                  patient={displayPatient}
+                  medicalHistory={displayMedicalHistory}
+                />
+                }
+              </>
+            )}
+          </div>
+        </div>
       </div>
-    </div>);
-
-};
-
-export default PatientProfile;
+    </div>
+  );
+}

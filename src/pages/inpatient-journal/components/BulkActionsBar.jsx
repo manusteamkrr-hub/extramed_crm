@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import Icon from '../../../components/AppIcon';
+
 import Button from '../../../components/ui/Button';
-import Select from '../../../components/ui/Select';
+
 
 const BulkActionsBar = ({ selectedCount, onBulkAction, onClearSelection }) => {
   const [showRoomTransfer, setShowRoomTransfer] = useState(false);
@@ -41,35 +41,54 @@ const BulkActionsBar = ({ selectedCount, onBulkAction, onClearSelection }) => {
     }
   };
 
-  if (selectedCount === 0) return null;
-
   return (
-    <div className="fixed bottom-0 left-0 right-0 lg:left-60 bg-card border-t-2 border-primary elevation-xl z-40 transition-smooth">
-      <div className="p-3 md:p-4 lg:p-6">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 md:gap-4">
+    <div className={`fixed bottom-0 left-0 right-0 bg-card border-t border-border elevation-lg transition-transform duration-300 ${selectedCount > 0 ? 'translate-y-0' : 'translate-y-full'} z-40`}>
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Icon name="CheckSquare" size={24} color="var(--color-primary)" />
+            <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-medium text-sm">
+              {selectedCount} выбрано
             </div>
-            <div>
-              <p className="font-body font-semibold text-foreground text-sm md:text-base">
-                Выбрано пациентов: {selectedCount}
-              </p>
-              <p className="text-xs md:text-sm caption text-muted-foreground">
-                Доступны групповые операции
-              </p>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearSelection}
+              iconName="X"
+              iconPosition="left"
+            >
+              Очистить
+            </Button>
           </div>
 
-          <div className="flex-1 flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              iconName="DoorOpen"
+              iconPosition="left"
+              onClick={() => onBulkAction('assign-room')}
+            >
+              Назначить палату
+            </Button>
+            
             <Button
               variant="outline"
               size="sm"
               iconName="ArrowRightLeft"
               iconPosition="left"
-              onClick={() => setShowRoomTransfer(!showRoomTransfer)}
+              onClick={() => onBulkAction('transfer')}
             >
-              Перевести в палату
+              Перевести
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              iconName="FileText"
+              iconPosition="left"
+              onClick={() => onBulkAction('generate-report')}
+            >
+              Отчет
             </Button>
 
             <Button
@@ -91,97 +110,8 @@ const BulkActionsBar = ({ selectedCount, onBulkAction, onClearSelection }) => {
             >
               Выписать
             </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              iconName="X"
-              onClick={onClearSelection}
-            >
-              Отменить
-            </Button>
           </div>
         </div>
-
-        {showRoomTransfer && (
-          <div className="mt-4 p-3 md:p-4 bg-muted/50 rounded-lg">
-            <div className="flex flex-col md:flex-row items-start md:items-end gap-3">
-              <div className="flex-1 w-full">
-                <Select
-                  label="Выберите палату для перевода"
-                  options={roomOptions}
-                  value={targetRoom}
-                  onChange={setTargetRoom}
-                  placeholder="Выберите палату"
-                  searchable
-                />
-              </div>
-              <div className="flex gap-2 w-full md:w-auto">
-                <Button
-                  variant="default"
-                  size="sm"
-                  iconName="Check"
-                  iconPosition="left"
-                  onClick={handleRoomTransfer}
-                  disabled={!targetRoom}
-                  className="flex-1 md:flex-initial"
-                >
-                  Перевести
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setShowRoomTransfer(false);
-                    setTargetRoom('');
-                  }}
-                >
-                  Отмена
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showPhysicianReassign && (
-          <div className="mt-4 p-3 md:p-4 bg-muted/50 rounded-lg">
-            <div className="flex flex-col md:flex-row items-start md:items-end gap-3">
-              <div className="flex-1 w-full">
-                <Select
-                  label="Выберите нового лечащего врача"
-                  options={physicianOptions}
-                  value={targetPhysician}
-                  onChange={setTargetPhysician}
-                  placeholder="Выберите врача"
-                  searchable
-                />
-              </div>
-              <div className="flex gap-2 w-full md:w-auto">
-                <Button
-                  variant="default"
-                  size="sm"
-                  iconName="Check"
-                  iconPosition="left"
-                  onClick={handlePhysicianReassign}
-                  disabled={!targetPhysician}
-                  className="flex-1 md:flex-initial"
-                >
-                  Назначить
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setShowPhysicianReassign(false);
-                    setTargetPhysician('');
-                  }}
-                >
-                  Отмена
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

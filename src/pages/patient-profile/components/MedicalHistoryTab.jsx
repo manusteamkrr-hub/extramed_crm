@@ -7,8 +7,25 @@ import { icd10Codes } from '../../../data/icd10Codes';
 
 const MedicalHistoryTab = ({ medicalHistory, onAddDiagnosis, onAddMedication, onAddAllergy }) => {
   const [showDiagnosisForm, setShowDiagnosisForm] = useState(false);
+  const [showMedicationForm, setShowMedicationForm] = useState(false);
+  const [showAllergyForm, setShowAllergyForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+
+  // Medication form state
+  const [medicationData, setMedicationData] = useState({
+    name: '',
+    dosage: '',
+    startDate: new Date()?.toISOString()?.split('T')?.[0],
+    prescribedBy: ''
+  });
+
+  // Allergy form state
+  const [allergyData, setAllergyData] = useState({
+    allergen: '',
+    reaction: '',
+    severity: 'Умеренная'
+  });
 
   const handleDiagnosisSearch = (query) => {
     setSearchQuery(query);
@@ -34,6 +51,36 @@ const MedicalHistoryTab = ({ medicalHistory, onAddDiagnosis, onAddMedication, on
     setShowDiagnosisForm(false);
     setSearchQuery('');
     setSearchResults([]);
+  };
+
+  const handleMedicationSubmit = (e) => {
+    e?.preventDefault();
+    if (medicationData?.name && medicationData?.dosage) {
+      onAddMedication({
+        ...medicationData,
+        isActive: true
+      });
+      setMedicationData({
+        name: '',
+        dosage: '',
+        startDate: new Date()?.toISOString()?.split('T')?.[0],
+        prescribedBy: ''
+      });
+      setShowMedicationForm(false);
+    }
+  };
+
+  const handleAllergySubmit = (e) => {
+    e?.preventDefault();
+    if (allergyData?.allergen && allergyData?.reaction) {
+      onAddAllergy(allergyData);
+      setAllergyData({
+        allergen: '',
+        reaction: '',
+        severity: 'Умеренная'
+      });
+      setShowAllergyForm(false);
+    }
   };
 
   return (
@@ -132,6 +179,53 @@ const MedicalHistoryTab = ({ medicalHistory, onAddDiagnosis, onAddMedication, on
           </Button>
         </div>
 
+        {showMedicationForm && (
+          <div className="bg-card border border-border rounded-lg p-4 mb-4">
+            <form onSubmit={handleMedicationSubmit} className="space-y-4">
+              <Input
+                label="Название препарата"
+                placeholder="Например, Аспирин"
+                value={medicationData?.name}
+                onChange={(e) => setMedicationData({ ...medicationData, name: e?.target?.value })}
+                required
+              />
+              <Input
+                label="Дозировка"
+                placeholder="Например, 100 мг 2 раза в день"
+                value={medicationData?.dosage}
+                onChange={(e) => setMedicationData({ ...medicationData, dosage: e?.target?.value })}
+                required
+              />
+              <Input
+                type="date"
+                label="Дата начала приёма"
+                value={medicationData?.startDate}
+                onChange={(e) => setMedicationData({ ...medicationData, startDate: e?.target?.value })}
+                required
+              />
+              <Input
+                label="Назначил врач"
+                placeholder="Имя врача"
+                value={medicationData?.prescribedBy}
+                onChange={(e) => setMedicationData({ ...medicationData, prescribedBy: e?.target?.value })}
+              />
+              <div className="flex gap-2">
+                <Button type="submit" variant="primary" size="sm">
+                  Сохранить
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowMedicationForm(false)}
+                >
+                  Отмена
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+
         <div className="space-y-3">
           {medicalHistory?.medications?.map((medication, index) => (
             <div key={index} className="bg-card border border-border rounded-lg p-4">
@@ -175,6 +269,54 @@ const MedicalHistoryTab = ({ medicalHistory, onAddDiagnosis, onAddMedication, on
             Добавить аллергию
           </Button>
         </div>
+
+        {showAllergyForm && (
+          <div className="bg-card border border-border rounded-lg p-4 mb-4">
+            <form onSubmit={handleAllergySubmit} className="space-y-4">
+              <Input
+                label="Аллерген"
+                placeholder="Например, Пенициллин"
+                value={allergyData?.allergen}
+                onChange={(e) => setAllergyData({ ...allergyData, allergen: e?.target?.value })}
+                required
+              />
+              <Input
+                label="Реакция"
+                placeholder="Описание реакции"
+                value={allergyData?.reaction}
+                onChange={(e) => setAllergyData({ ...allergyData, reaction: e?.target?.value })}
+                required
+              />
+              <div>
+                <label className="block text-sm font-body font-medium text-foreground mb-2">
+                  Степень тяжести
+                </label>
+                <select
+                  value={allergyData?.severity}
+                  onChange={(e) => setAllergyData({ ...allergyData, severity: e?.target?.value })}
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="Лёгкая">Лёгкая</option>
+                  <option value="Умеренная">Умеренная</option>
+                  <option value="Тяжёлая">Тяжёлая</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" variant="primary" size="sm">
+                  Сохранить
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowAllergyForm(false)}
+                >
+                  Отмена
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
 
         <div className="space-y-3">
           {medicalHistory?.allergies?.map((allergy, index) => (

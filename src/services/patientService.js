@@ -1,4 +1,5 @@
 import localDB from '../lib/localDatabase';
+import realtimeSyncService from './realtimeSync';
 
 // Enhanced error handling wrapper
 const withErrorHandling = async (operation, fallback = null) => {
@@ -76,19 +77,23 @@ const patientService = {
 
   async updatePatient(patientId, updates) {
     try {
-      let patients = localDB?.getAll('patients') || [];
+      let patients = localDB?.select('patients') || [];
       const index = patients?.findIndex(p => p?.id === patientId);
       
       if (index !== -1) {
+        // Keep the original object and only update specified fields
         patients[index] = {
           ...patients?.[index],
           ...updates,
           updated_at: new Date()?.toISOString()
         };
         
-        localDB?.update('patients', patients);
+        localDB?.safeSetItem('extramed_patients', patients);
         
-        // Trigger refresh event
+        // ✅ NEW: Real-time sync notification
+        realtimeSyncService?.syncPatients('update', patients?.[index]);
+        
+        // Trigger refresh event (legacy support)
         window.dispatchEvent(new Event('patientUpdated'));
         
         return {
@@ -111,10 +116,108 @@ const patientService = {
   },
 
   async deletePatient(id) {
-    return withErrorHandling(
+    const result = await withErrorHandling(
       () => localDB?.delete('patients', id),
       false
     );
+    
+    // ✅ NEW: Real-time sync notification
+    if (result) {
+      realtimeSyncService?.syncPatients('delete', { id });
+    }
+    
+    return result;
+  },
+
+  /**
+   * Create a new patient record
+   * @param {Object} patientData - Patient information from registration form
+   * @returns {Promise<Object>} - { success, data, error }
+   */
+  async createPatient(patientData) {
+    return withErrorHandling(
+      async () => {
+        // Generate MRN if not provided
+        const mrn = patientData?.medicalRecordNumber || this.generateMRN();
+        
+        // Prepare patient record with all fields
+        const newPatient = {
+          // Personal Information
+          firstName: patientData?.firstName?.trim(),
+          lastName: patientData?.lastName?.trim(),
+          middleName: patientData?.middleName?.trim() || '',
+          dateOfBirth: patientData?.dateOfBirth,
+          gender: patientData?.gender,
+          bloodType: patientData?.bloodType || '',
+          
+          // Contact Information
+          phone: patientData?.phone?.trim(),
+          email: patientData?.email?.trim() || '',
+          address: patientData?.address?.trim() || '',
+          city: patientData?.city?.trim() || '',
+          region: patientData?.region?.trim() || '',
+          postalCode: patientData?.postalCode?.trim() || '',
+          
+          // Document Information
+          passportSeries: patientData?.passportSeries?.trim() || '',
+          passportNumber: patientData?.passportNumber?.trim() || '',
+          passportIssuedBy: patientData?.passportIssuedBy?.trim() || '',
+          passportIssueDate: patientData?.passportIssueDate || '',
+          snils: patientData?.snils?.trim() || '',
+          insurancePolicy: patientData?.insurancePolicy?.trim() || '',
+          insuranceCompany: patientData?.insuranceCompany?.trim() || '',
+          
+          // Medical Information
+          allergies: patientData?.allergies?.trim() || '',
+          
+          // Emergency Contact
+          emergencyContactName: patientData?.emergencyContactName?.trim() || '',
+          emergencyContactPhone: patientData?.emergencyContactPhone?.trim() || '',
+          emergencyContactRelation: patientData?.emergencyContactRelation?.trim() || '',
+          
+          // System Fields
+          medicalRecordNumber: mrn,
+          status: 'active',
+          registrationDate: new Date()?.toISOString(),
+          createdAt: new Date()?.toISOString(),
+          updatedAt: new Date()?.toISOString()
+        };
+
+        // Insert into database
+        const insertedPatient = await localDB?.insert('patients', newPatient);
+
+        // ✅ NEW: Real-time sync notification
+        realtimeSyncService?.syncPatients('create', insertedPatient);
+
+        // Trigger events for UI updates (legacy support)
+        window.dispatchEvent(new Event('patientCreated'));
+        window.dispatchEvent(new Event('patientUpdated'));
+
+        return {
+          success: true,
+          data: insertedPatient
+        };
+      },
+      {
+        success: false,
+        data: null,
+        error: 'Failed to create patient record'
+      }
+    );
+  },
+
+  /**
+   * Generate Medical Record Number (MRN)
+   * Format: MRN-YYYYMMDD-XXXX
+   */
+  generateMRN() {
+    const date = new Date();
+    const year = date?.getFullYear();
+    const month = String(date?.getMonth() + 1)?.padStart(2, '0');
+    const day = String(date?.getDate())?.padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000)?.toString()?.padStart(4, '0');
+    
+    return `MRN-${year}${month}${day}-${random}`;
   },
 
   /**

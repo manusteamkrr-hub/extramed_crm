@@ -5,6 +5,7 @@ import Select from '../../../components/ui/Select';
 import Input from '../../../components/ui/Input';
 import { medicalServices, serviceCategories, getCategoryDisplayName, getServicesByCategory, calculateServiceTotal } from '../../../data/medicalServices';
 import CreateEstimateModal from './CreateEstimateModal';
+import EstimateDetailModal from './EstimateDetailModal';
 
 const FinancialSummaryTab = ({ financialData, userRole, patientId, onEstimateCreated }) => {
   const [showServiceSelector, setShowServiceSelector] = useState(false);
@@ -14,6 +15,8 @@ const FinancialSummaryTab = ({ financialData, userRole, patientId, onEstimateCre
   const [serviceQuantity, setServiceQuantity] = useState(1);
   const [appliedServices, setAppliedServices] = useState([]);
   const [showEstimateModal, setShowEstimateModal] = useState(false);
+  const [selectedEstimate, setSelectedEstimate] = useState(null);
+  const [showEstimateDetail, setShowEstimateDetail] = useState(false);
 
   // Load applied services from existing estimates
   useEffect(() => {
@@ -154,6 +157,16 @@ const FinancialSummaryTab = ({ financialData, userRole, patientId, onEstimateCre
     }
     // Don't clear appliedServices anymore - they will be reloaded from estimates via useEffect
     setShowEstimateModal(false);
+  };
+
+  const handleViewEstimate = (estimate) => {
+    setSelectedEstimate(estimate);
+    setShowEstimateDetail(true);
+  };
+
+  const handleCloseEstimateDetail = () => {
+    setShowEstimateDetail(false);
+    setSelectedEstimate(null);
   };
 
   const getPaymentMethodLabel = (method) => {
@@ -531,7 +544,12 @@ const FinancialSummaryTab = ({ financialData, userRole, patientId, onEstimateCre
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" iconName="Eye">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    iconName="Eye"
+                    onClick={() => handleViewEstimate(estimate)}
+                  >
                     Просмотр
                   </Button>
                   {estimate?.status !== 'paid' && (
@@ -593,6 +611,11 @@ const FinancialSummaryTab = ({ financialData, userRole, patientId, onEstimateCre
         appliedServices={getNewServicesForEstimate()}
         patientId={patientId}
         onEstimateCreated={handleEstimateCreated}
+      />
+      <EstimateDetailModal
+        isOpen={showEstimateDetail}
+        onClose={handleCloseEstimateDetail}
+        estimate={selectedEstimate}
       />
     </div>
   );

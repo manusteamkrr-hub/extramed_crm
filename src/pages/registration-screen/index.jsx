@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Button from 'components/ui/Button';
 
 
@@ -13,6 +14,7 @@ import RoleSelectionStep from './components/RoleSelectionStep';
 import SecurityStep from './components/SecurityStep';
 
 import patientService from '../../services/patientService';
+import { pageVariants, pageTransition } from '../../config/animations';
 
 const RegistrationScreen = () => {
   const navigate = useNavigate();
@@ -248,8 +250,15 @@ const RegistrationScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
-      <div className="w-full max-w-3xl">
+    <motion.div
+      className="min-h-screen flex items-center justify-center bg-background p-4"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+      transition={pageTransition}
+    >
+      <div className="w-full max-w-2xl">
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4">
@@ -337,7 +346,7 @@ const RegistrationScreen = () => {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

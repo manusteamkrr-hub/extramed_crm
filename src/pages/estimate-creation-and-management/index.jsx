@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import Sidebar from '../../components/navigation/Sidebar';
-import Header from '../../components/navigation/Header';
+import { motion } from 'framer-motion';
+
+
 import ServiceCatalogSidebar from './components/ServiceCatalogSidebar';
 import PatientHeader from './components/PatientHeader';
 import EstimateTabBar from './components/EstimateTabBar';
@@ -12,6 +13,8 @@ import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import patientService from '../../services/patientService';
 import estimateService from '../../services/estimateService';
+import { pageVariants, pageTransition } from '../../config/animations';
+import Layout from '../../components/navigation/Layout';
 
 const EstimateCreationAndManagement = () => {
   const location = useLocation();
@@ -219,136 +222,129 @@ const EstimateCreationAndManagement = () => {
   const selectedServices = activeEstimate?.items || [];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} />
-      <div
-        className={`transition-smooth ${
-        isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-60'}`
-        }>
-
-        <Header
-          userRole={currentRole}
-          onPatientSelect={handlePatientSelect}
-          onRoleChange={handleRoleChange}
-          onActionClick={handleActionClick} />
-
-
-        <main className="p-4 md:p-6 lg:p-8">
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-heading font-semibold text-foreground mb-2">
-                  Создание и управление сметами
-                </h1>
-                <p className="text-sm md:text-base caption text-muted-foreground">
-                  Формирование детальных смет лечения с автоматическим расчетом стоимости
-                </p>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                iconName={showServiceCatalog ? 'PanelLeftClose' : 'PanelLeftOpen'}
-                iconPosition="left"
-                onClick={() => setShowServiceCatalog(!showServiceCatalog)}
-                className="lg:hidden">
-
-                {showServiceCatalog ? 'Скрыть каталог' : 'Показать каталог'}
-              </Button>
-            </div>
-
-            <PatientHeader patient={selectedPatient} />
-          </div>
-
-          {selectedPatient && estimates?.length > 0 &&
-          <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
-              <div
-              className={`
-                  ${showServiceCatalog ? 'block' : 'hidden lg:block'}
-                  w-full lg:w-1/4 flex-shrink-0
-                `}>
-
-                <div className="sticky top-24 bg-card border border-border rounded-lg overflow-hidden elevation-md h-[calc(100vh-12rem)]">
-                  <ServiceCatalogSidebar
-                  onServiceSelect={handleServiceSelect}
-                  selectedServices={selectedServices} />
-
-                </div>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="bg-card border border-border rounded-lg overflow-hidden elevation-md">
-                  <EstimateTabBar
-                  estimates={estimates}
-                  activeEstimateId={activeEstimateId}
-                  onTabChange={setActiveEstimateId}
-                  onNewEstimate={handleNewEstimate} />
-
-
-                  {activeEstimate &&
-                <>
-                      <EstimateToolbar
-                    estimate={activeEstimate}
-                    onSave={handleSaveEstimate}
-                    onExport={handleExportEstimate}
-                    onApplyTemplate={handleApplyTemplate}
-                    onBulkDiscount={handleBulkDiscount} />
-
-
-                      <div className="p-4 md:p-6">
-                        {activeEstimate?.items?.length > 0 ?
-                    <div className="space-y-3 md:space-y-4 mb-6">
-                            {activeEstimate?.items?.map((item) =>
-                      <EstimateLineItem
-                        key={item?.id}
-                        item={item}
-                        onUpdate={handleUpdateLineItem}
-                        onRemove={handleRemoveLineItem}
-                        readOnly={
-                        activeEstimate?.status === 'paid' ||
-                        activeEstimate?.status === 'closed'
-                        } />
-
-                      )}
-                          </div> :
-
-                    <div className="text-center py-12 text-muted-foreground">
-                            <Icon name="FileText" size={48} className="mx-auto mb-4 opacity-50" />
-                            <p className="text-base md:text-lg font-body mb-2">
-                              Смета пуста
-                            </p>
-                            <p className="text-sm caption">
-                              Выберите услуги из каталога для добавления в смету
-                            </p>
-                          </div>
-                    }
-
-                        {activeEstimate?.items?.length > 0 &&
-                    <EstimateSummary estimate={activeEstimate} />
-                    }
-                      </div>
-                    </>
-                }
-                </div>
-              </div>
-            </div>
-          }
-
-          {!selectedPatient &&
-          <div className="bg-card border border-border rounded-lg p-8 md:p-12 text-center elevation-md">
-              <Icon name="UserCircle" size={64} className="mx-auto mb-4 text-muted-foreground" />
-              <h2 className="text-xl md:text-2xl font-heading font-semibold text-foreground mb-2">
-                Выберите пациента
-              </h2>
+    <Layout userRole={currentRole} onRoleChange={handleRoleChange}>
+      <motion.div
+        className="p-4 md:p-6 lg:p-8"
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        variants={pageVariants}
+        transition={pageTransition}
+      >
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-heading font-semibold text-foreground mb-2">
+                Создание и управление сметами
+              </h1>
               <p className="text-sm md:text-base caption text-muted-foreground">
-                Используйте поиск в верхней панели для выбора пациента и создания сметы
+                Формирование детальных смет лечения с автоматическим расчетом стоимости
               </p>
             </div>
-          }
-        </main>
-      </div>
-    </div>);
 
+            <Button
+              variant="outline"
+              size="sm"
+              iconName={showServiceCatalog ? 'PanelLeftClose' : 'PanelLeftOpen'}
+              iconPosition="left"
+              onClick={() => setShowServiceCatalog(!showServiceCatalog)}
+              className="lg:hidden">
+
+              {showServiceCatalog ? 'Скрыть каталог' : 'Показать каталог'}
+            </Button>
+          </div>
+
+          <PatientHeader patient={selectedPatient} />
+        </div>
+
+        {selectedPatient && estimates?.length > 0 &&
+        <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
+            <div
+            className={`
+                ${showServiceCatalog ? 'block' : 'hidden lg:block'}
+                w-full lg:w-1/4 flex-shrink-0
+              `}>
+
+              <div className="sticky top-24 bg-card border border-border rounded-lg overflow-hidden elevation-md h-[calc(100vh-12rem)]">
+                <ServiceCatalogSidebar
+                onServiceSelect={handleServiceSelect}
+                selectedServices={selectedServices} />
+
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="bg-card border border-border rounded-lg overflow-hidden elevation-md">
+                <EstimateTabBar
+                estimates={estimates}
+                activeEstimateId={activeEstimateId}
+                onTabChange={setActiveEstimateId}
+                onNewEstimate={handleNewEstimate} />
+
+
+                {activeEstimate &&
+              <>
+                  <EstimateToolbar
+                estimate={activeEstimate}
+                onSave={handleSaveEstimate}
+                onExport={handleExportEstimate}
+                onApplyTemplate={handleApplyTemplate}
+                onBulkDiscount={handleBulkDiscount} />
+
+
+                  <div className="p-4 md:p-6">
+                    {activeEstimate?.items?.length > 0 ?
+              <div className="space-y-3 md:space-y-4 mb-6">
+                      {activeEstimate?.items?.map((item) =>
+                    <EstimateLineItem
+                      key={item?.id}
+                      item={item}
+                      onUpdate={handleUpdateLineItem}
+                      onRemove={handleRemoveLineItem}
+                      readOnly={
+                      activeEstimate?.status === 'paid' ||
+                      activeEstimate?.status === 'closed'
+                      } />
+
+                    )}
+                        </div> :
+
+              <div className="text-center py-12 text-muted-foreground">
+                      <Icon name="FileText" size={48} className="mx-auto mb-4 opacity-50" />
+                      <p className="text-base md:text-lg font-body mb-2">
+                        Смета пуста
+                      </p>
+                      <p className="text-sm caption">
+                        Выберите услуги из каталога для добавления в смету
+                      </p>
+                    </div>
+              }
+
+                {activeEstimate?.items?.length > 0 &&
+              <EstimateSummary estimate={activeEstimate} />
+              }
+                  </div>
+                </>
+            }
+              </div>
+            </div>
+          </div>
+        }
+
+        {!selectedPatient &&
+        <div className="bg-card border border-border rounded-lg p-8 md:p-12 text-center elevation-md">
+            <Icon name="UserCircle" size={64} className="mx-auto mb-4 text-muted-foreground" />
+            <h2 className="text-xl md:text-2xl font-heading font-semibold text-foreground mb-2">
+              Выберите пациента
+            </h2>
+            <p className="text-sm md:text-base caption text-muted-foreground">
+              Используйте поиск в верхней панели для выбора пациента и создания сметы
+            </p>
+          </div>
+        }
+      </motion.div>
+    </Layout>
+  );
 };
 
 export default EstimateCreationAndManagement;

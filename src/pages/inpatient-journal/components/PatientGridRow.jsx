@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { Checkbox } from '../../../components/ui/Checkbox';
+import PatientEditModal from './PatientEditModal';
 
 const PatientGridRow = ({ patient, isSelected, onSelect, userRole, onQuickAction }) => {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -50,6 +53,30 @@ const PatientGridRow = ({ patient, isSelected, onSelect, userRole, onQuickAction
     : null;
 
   const isOverdue = daysUntilDischarge !== null && daysUntilDischarge < 0;
+  
+  // Check if patient needs room assignment
+  const needsRoomAssignment = !patient?.roomNumber || 
+    patient?.roomNumber === 'Не назначена' || patient?.roomNumber?.toLowerCase()?.includes('не назначена') ||
+    patient?.source === 'placement_service';
+
+  const handleActionClick = (action) => {
+    setShowActionsMenu(false);
+    
+    if (action === 'edit-inline') {
+      setShowEditModal(true);
+      return;
+    }
+    
+    onQuickAction(patient?.id, action);
+  };
+
+  const handleEditSave = async () => {
+    setShowEditModal(false);
+    // Trigger parent refresh
+    if (onQuickAction) {
+      onQuickAction(patient?.id, 'refresh-data');
+    }
+  };
 
   return (
     <div className={`border-b border-border transition-smooth ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/50'}`}>
@@ -88,15 +115,16 @@ const PatientGridRow = ({ patient, isSelected, onSelect, userRole, onQuickAction
 
           <div className="col-span-2">
             <div className="flex items-center gap-2">
-              <Icon name="DoorOpen" size={16} color={roomColor} />
-              <span className={`font-body font-medium text-sm md:text-base ${roomColor}`}>
-                Палата {patient?.roomNumber}
+              <Icon name="DoorOpen" size={16} color={needsRoomAssignment ? 'var(--color-amber-600)' : roomColor} />
+              <span className={`font-body font-medium text-sm md:text-base ${needsRoomAssignment ? 'text-amber-600' : roomColor}`}>
+                {needsRoomAssignment ? 'Не назначена' : `Палата ${patient?.roomNumber}`}
               </span>
             </div>
             <p className="text-xs md:text-sm caption text-muted-foreground mt-0.5">
-              {patient?.roomType === 'economy' ? 'Эконом' : 
-               patient?.roomType === 'standard' ? 'Стандарт' : 
-               patient?.roomType === 'comfort' ? 'Комфорт' : 'VIP'}
+              {needsRoomAssignment ? 'Требуется назначение' : 
+               (patient?.roomType === 'economy' ? 'Эконом' : 
+                patient?.roomType === 'standard' ? 'Стандарт' : 
+                patient?.roomType === 'comfort' ? 'Комфорт' : 'VIP')}
             </p>
           </div>
 
@@ -127,20 +155,65 @@ const PatientGridRow = ({ patient, isSelected, onSelect, userRole, onQuickAction
           </div>
 
           <div className="col-span-1 flex items-center justify-end gap-1">
+            {needsRoomAssignment && (
+              <Button
+                variant="default"
+                size="icon"
+                iconName="DoorOpen"
+                onClick={() => handleActionClick('assign-room')}
+                title="Назначить палату"
+              />
+            )}
             <Button
               variant="ghost"
               size="icon"
               iconName="Edit"
-              onClick={() => navigate('/patient-profile', { state: { patientId: patient?.id } })}
+              onClick={() => setShowEditModal(true)}
               title="Редактировать"
             />
-            <Button
-              variant="ghost"
-              size="icon"
-              iconName="MoreVertical"
-              onClick={() => onQuickAction(patient?.id, 'menu')}
-              title="Действия"
-            />
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                iconName="MoreVertical"
+                onClick={() => setShowActionsMenu(!showActionsMenu)}
+                title="Действия"
+              />
+              {showActionsMenu && (
+                <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-lg elevation-md py-1 z-10 min-w-[180px]">
+                  <button
+                    onClick={() => handleActionClick('edit-inline')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-smooth flex items-center gap-2"
+                  >
+                    <Icon name="Edit" size={16} />
+                    Быстрое редактирование
+                  </button>
+                  {needsRoomAssignment && (
+                    <button
+                      onClick={() => handleActionClick('assign-room')}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-smooth flex items-center gap-2"
+                    >
+                      <Icon name="DoorOpen" size={16} />
+                      Назначить палату
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleActionClick('transfer-room')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-smooth flex items-center gap-2"
+                  >
+                    <Icon name="ArrowRightLeft" size={16} />
+                    Перевести в другую палату
+                  </button>
+                  <button
+                    onClick={() => handleActionClick('discharge')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-smooth flex items-center gap-2"
+                  >
+                    <Icon name="LogOut" size={16} />
+                    Выписать пациента
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -153,13 +226,18 @@ const PatientGridRow = ({ patient, isSelected, onSelect, userRole, onQuickAction
               {patient?.name}
             </p>
             <p className="text-xs md:text-sm caption text-muted-foreground mt-0.5">
-              Палата {patient?.roomNumber} • {patient?.attendingPhysician}
+              {needsRoomAssignment ? 'Палата не назначена' : `Палата ${patient?.roomNumber}`} • {patient?.attendingPhysician}
             </p>
           </button>
           <div className="flex items-center gap-2 mt-2">
             <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-caption ${statusColors?.bg} ${statusColors?.text}`}>
               {statusColors?.label}
             </span>
+            {needsRoomAssignment && (
+              <span className="inline-flex px-2 py-1 rounded-lg text-xs font-caption bg-amber-500/10 text-amber-600">
+                Требуется палата
+              </span>
+            )}
             {isOverdue && (
               <span className="inline-flex px-2 py-1 rounded-lg text-xs font-caption bg-error/10 text-error">
                 Просрочено
@@ -205,24 +283,42 @@ const PatientGridRow = ({ patient, isSelected, onSelect, userRole, onQuickAction
           )}
           <div className="flex gap-2 pt-2">
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               iconName="Edit"
               iconPosition="left"
-              onClick={() => navigate('/patient-profile', { state: { patientId: patient?.id } })}
+              onClick={() => setShowEditModal(true)}
               className="flex-1"
             >
               Редактировать
             </Button>
+            {needsRoomAssignment && (
+              <Button
+                variant="outline"
+                size="sm"
+                iconName="DoorOpen"
+                iconPosition="left"
+                onClick={() => handleActionClick('assign-room')}
+              >
+                Палата
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
               iconName="MoreVertical"
-              onClick={() => onQuickAction(patient?.id, 'menu')}
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
             />
           </div>
         </div>
       )}
+      
+      <PatientEditModal
+        patient={patient}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleEditSave}
+      />
     </div>
   );
 };

@@ -32,9 +32,9 @@ const RoomCapacitySidebar = ({ rooms, onRoomSelect, selectedRoom }) => {
     }
   };
 
-  const totalCapacity = rooms?.reduce((sum, room) => sum + room?.capacity, 0);
-  const totalOccupied = rooms?.reduce((sum, room) => sum + room?.occupied, 0);
-  const occupancyRate = ((totalOccupied / totalCapacity) * 100)?.toFixed(1);
+  const totalCapacity = rooms?.reduce((sum, room) => sum + (room?.capacity || 0), 0) || 0;
+  const totalOccupied = rooms?.reduce((sum, room) => sum + (room?.occupied || 0), 0) || 0;
+  const occupancyRate = totalCapacity > 0 ? ((totalOccupied / totalCapacity) * 100)?.toFixed(1) : '0.0';
 
   return (
     <div className="h-full flex flex-col bg-card border-r border-border">
@@ -45,7 +45,10 @@ const RoomCapacitySidebar = ({ rooms, onRoomSelect, selectedRoom }) => {
         <div className="flex items-center gap-2 text-sm md:text-base caption text-muted-foreground">
           <Icon name="Bed" size={18} color="var(--color-muted-foreground)" />
           <span className="data-text">{totalOccupied}/{totalCapacity} мест</span>
-          <span className={`ml-auto font-medium ${occupancyRate >= 90 ? 'text-error' : occupancyRate >= 70 ? 'text-warning' : 'text-success'}`}>
+          <span className={`ml-auto font-medium ${
+            occupancyRate >= 90 ? 'text-error' : 
+            occupancyRate >= 70 ? 'text-warning': 'text-success'
+          }`}>
             {occupancyRate}%
           </span>
         </div>

@@ -1,4 +1,5 @@
 import localDB from '../lib/localDatabase';
+import realtimeSyncService from './realtimeSync';
 
 // Enhanced error handling wrapper
 const withErrorHandling = async (operation, fallback = null) => {
@@ -29,6 +30,28 @@ const withErrorHandling = async (operation, fallback = null) => {
     return fallback;
   }
 };
+
+// ✅ NEW: Register notification sync callbacks
+realtimeSyncService?.registerSyncCallback('inpatient_records', 'notifications', async (action, data) => {
+  if (action === 'create' || action === 'update') {
+    console.log('🔔 Generating notifications for inpatient record change:', data);
+    await NotificationService.generateNotifications();
+  }
+});
+
+realtimeSyncService?.registerSyncCallback('estimates', 'notifications', async (action, data) => {
+  if (action === 'create' || action === 'update') {
+    console.log('🔔 Generating notifications for estimate change:', data);
+    await NotificationService.generateNotifications();
+  }
+});
+
+realtimeSyncService?.registerSyncCallback('patients', 'notifications', async (action, data) => {
+  if (action === 'create') {
+    console.log('🔔 Generating notifications for new patient:', data);
+    await NotificationService.generateNotifications();
+  }
+});
 
 const NotificationService = {
   async getNotifications({ limit = 50 } = {}) {
@@ -84,8 +107,110 @@ const NotificationService = {
   async getUrgentNotifications() {
     return withErrorHandling(
       () => {
-        const notifications = localDB?.select('notifications');
-        return notifications?.filter(n => n?.priority === 'urgent' && !n?.dismissed)?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        // Generate real-time notifications from actual data sources
+        const urgentNotifications = [];
+        
+        // 1. Check for critical room capacity
+        const inpatients = localDB?.select('inpatients', { status: 'active' }) || [];
+        const rooms = localDB?.select('rooms') || [];
+        
+        rooms?.forEach(room => {
+          const occupants = inpatients?.filter(inp => inp?.roomId === room?.id);
+          const occupancyRate = (occupants?.length / room?.totalBeds) * 100;
+
+          if (occupancyRate >= 90) {
+            urgentNotifications?.push({
+              id: `capacity-${room?.id}-${Date.now()}`,
+              type: 'capacity',
+              priority: 'critical',
+              title: 'Критическая загруженность палаты',
+              message: `Палата ${room?.roomNumber} (${room?.type}) заполнена на ${Math.round(occupancyRate)}%. Требуется срочное решение.`,
+              timestamp: new Date()?.toISOString(),
+              patientId: null,
+              dismissed: false,
+              read: false
+            });
+          }
+        });
+
+        // 2. Check for patients requiring discharge
+        const patients = localDB?.select('patients') || [];
+        patients?.forEach(patient => {
+          const inpatient = inpatients?.find(inp => inp?.patientId === patient?.id);
+          if (inpatient?.dischargeDate) {
+            const dischargeDate = new Date(inpatient.dischargeDate);
+            const today = new Date();
+            const daysDiff = Math.ceil((dischargeDate - today) / (1000 * 60 * 60 * 24));
+
+            if (daysDiff <= 1 && daysDiff >= 0) {
+              urgentNotifications?.push({
+                id: `discharge-${patient?.id}-${Date.now()}`,
+                type: 'discharge',
+                priority: 'high',
+                title: 'Пациент готов к выписке',
+                message: `${patient?.firstName} ${patient?.lastName} должен быть выписан завтра. Необходимо завершить документы.`,
+                timestamp: new Date()?.toISOString(),
+                patientId: patient?.id,
+                dismissed: false,
+                read: false
+              });
+            }
+          }
+        });
+
+        // 3. Check for unpaid estimates
+        const estimates = localDB?.select('estimates') || [];
+        const unpaidEstimates = estimates?.filter(est => 
+          est?.status === 'unpaid' || est?.status === 'partially_paid'
+        );
+
+        unpaidEstimates?.forEach(estimate => {
+          const patient = patients?.find(p => p?.id === estimate?.patientId);
+          const dueDate = new Date(estimate?.createdAt);
+          dueDate?.setDate(dueDate?.getDate() + 7); // 7 days payment term
+          const today = new Date();
+          
+          if (today > dueDate) {
+            urgentNotifications?.push({
+              id: `payment-${estimate?.id}-${Date.now()}`,
+              type: 'payment',
+              priority: 'medium',
+              title: 'Просроченная оплата',
+              message: `Счет №${estimate?.estimateNumber} для ${patient?.firstName} ${patient?.lastName} просрочен. Сумма: ${new Intl.NumberFormat('ru-RU')?.format(estimate?.totalAmount)} ₽`,
+              timestamp: new Date()?.toISOString(),
+              patientId: patient?.id,
+              dismissed: false,
+              read: false
+            });
+          }
+        });
+
+        // 4. Check for critical medical conditions
+        const medicalRecords = localDB?.select('medical_records') || [];
+        medicalRecords?.forEach(record => {
+          if (record?.severity === 'critical' || record?.status === 'urgent') {
+            const patient = patients?.find(p => p?.id === record?.patientId);
+            urgentNotifications?.push({
+              id: `medical-${record?.id}-${Date.now()}`,
+              type: 'medical',
+              priority: 'critical',
+              title: 'Критическое состояние пациента',
+              message: `${patient?.firstName} ${patient?.lastName}: ${record?.diagnosis}. Требуется немедленное внимание врача.`,
+              timestamp: new Date()?.toISOString(),
+              patientId: patient?.id,
+              dismissed: false,
+              read: false
+            });
+          }
+        });
+
+        // Sort by priority and timestamp
+        const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+        return urgentNotifications?.sort((a, b) => {
+          const priorityDiff = priorityOrder?.[a?.priority] - priorityOrder?.[b?.priority];
+          if (priorityDiff !== 0) return priorityDiff;
+          return new Date(b?.timestamp) - new Date(a?.timestamp);
+        });
       },
       []
     );

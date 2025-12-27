@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Button from 'components/ui/Button';
 import Input from 'components/ui/Input';
 import Select from 'components/ui/Select';
 import { Checkbox } from 'components/ui/Checkbox';
 import Icon from 'components/AppIcon';
+import { pageVariants, pageTransition } from '../../config/animations';
 
 
 const LoginScreen = () => {
@@ -93,7 +95,14 @@ const LoginScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
+    <motion.div
+      className="min-h-screen flex items-center justify-center bg-background p-4"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+      transition={pageTransition}
+    >
       <div className="w-full max-w-md">
         {/* Logo and Header */}
         <div className="text-center mb-8">
@@ -235,7 +244,7 @@ const LoginScreen = () => {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

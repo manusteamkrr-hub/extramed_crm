@@ -3,11 +3,13 @@ import Icon from '../../../components/AppIcon';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Image from '../../../components/AppImage';
+import Select from '../../../components/ui/Select';
 
 const DemographicsTab = ({ patient, onSave, onPhotoUpdate, isEditingFromHeader = false, onEditComplete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isPhotoEditing, setIsPhotoEditing] = useState(false);
   const fileInputRef = useRef(null);
+  const [physicians, setPhysicians] = useState([]);
   const [formData, setFormData] = useState({
     fullName: patient?.fullName,
     dateOfBirth: patient?.dateOfBirth,
@@ -21,8 +23,39 @@ const DemographicsTab = ({ patient, onSave, onPhotoUpdate, isEditingFromHeader =
     passportNumber: patient?.passportNumber,
     insuranceCompany: patient?.insuranceCompany,
     insurancePolicy: patient?.insurancePolicy,
+    attendingPhysicianId: patient?.attendingPhysicianId || ''
   });
   const [photoPreview, setPhotoPreview] = useState(patient?.photo);
+
+  // Load physicians from localStorage
+  useEffect(() => {
+    const loadPhysicians = () => {
+      const staffData = JSON.parse(localStorage.getItem('extramed_staff') || '[]');
+      const doctorsList = staffData?.filter(staff => staff?.role === 'doctor' && staff?.status === 'active');
+      setPhysicians(doctorsList);
+    };
+    loadPhysicians();
+  }, []);
+
+  // Update form when patient changes
+  useEffect(() => {
+    setFormData({
+      fullName: patient?.fullName,
+      dateOfBirth: patient?.dateOfBirth,
+      gender: patient?.gender,
+      phone: patient?.phone,
+      email: patient?.email,
+      address: patient?.address,
+      emergencyContact: patient?.emergencyContact,
+      emergencyPhone: patient?.emergencyPhone,
+      passportSeries: patient?.passportSeries,
+      passportNumber: patient?.passportNumber,
+      insuranceCompany: patient?.insuranceCompany,
+      insurancePolicy: patient?.insurancePolicy,
+      attendingPhysicianId: patient?.attendingPhysicianId || ''
+    });
+    setPhotoPreview(patient?.photo);
+  }, [patient]);
 
   // Handle external edit activation from header button
   useEffect(() => {
@@ -33,6 +66,11 @@ const DemographicsTab = ({ patient, onSave, onPhotoUpdate, isEditingFromHeader =
 
   const handleChange = (e) => {
     const { name, value } = e?.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Add new handler specifically for Select component
+  const handleSelectChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -61,11 +99,26 @@ const DemographicsTab = ({ patient, onSave, onPhotoUpdate, isEditingFromHeader =
     }
   };
 
-  const handleSave = () => {
-    onSave(formData);
-    setIsEditing(false);
-    if (onEditComplete) {
-      onEditComplete();
+  const handleSave = async () => {
+    try {
+      onSave(formData);
+      setIsEditing(false);
+      if (onEditComplete) {
+        onEditComplete();
+      }
+
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('patientUpdated', { 
+        detail: { patientId: patient?.id, timestamp: new Date().toISOString() } 
+      }));
+
+      window.dispatchEvent(new CustomEvent('notificationSync', { 
+        detail: { action: 'patient_updated', patientId: patient?.id } 
+      }));
+
+    } catch (error) {
+      console.error('Error saving patient data:', error);
+      // Handle error appropriately
     }
   };
 
@@ -83,11 +136,20 @@ const DemographicsTab = ({ patient, onSave, onPhotoUpdate, isEditingFromHeader =
       passportNumber: patient?.passportNumber,
       insuranceCompany: patient?.insuranceCompany,
       insurancePolicy: patient?.insurancePolicy,
+      attendingPhysicianId: patient?.attendingPhysicianId || ''
     });
     setIsEditing(false);
     if (onEditComplete) {
       onEditComplete();
     }
+  };
+
+  // Get attending physician name
+  const getAttendingPhysicianName = () => {
+    if (!patient?.attendingPhysicianId && !formData?.attendingPhysicianId) return 'Не назначен';
+    const physicianId = isEditing ? formData?.attendingPhysicianId : patient?.attendingPhysicianId;
+    const physician = physicians?.find(p => p?.id === physicianId);
+    return physician ? `${physician?.lastName} ${physician?.firstName} ${physician?.middleName || ''}`?.trim() : 'Не назначен';
   };
 
   return (
@@ -238,6 +300,34 @@ const DemographicsTab = ({ patient, onSave, onPhotoUpdate, isEditingFromHeader =
                 onChange={handleChange}
                 disabled={!isEditing}
               />
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-4 md:pt-6">
+            <h3 className="text-base md:text-lg font-heading font-semibold text-foreground mb-3 md:mb-4">
+              Лечащий врач
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              {isEditing ? (
+                <Select
+                  label="Выберите врача"
+                  name="attendingPhysicianId"
+                  value={formData?.attendingPhysicianId}
+                  onChange={(value) => handleSelectChange('attendingPhysicianId', value)}
+                  options={[
+                    { value: '', label: 'Не назначен' },
+                    ...physicians?.map(p => ({
+                      value: p?.id,
+                      label: `${p?.lastName} ${p?.firstName} ${p?.middleName || ''}`?.trim()
+                    }))
+                  ]}
+                />
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <Icon name="UserCheck" size={20} color="var(--color-primary)" />
+                  <span className="text-foreground font-medium">{getAttendingPhysicianName()}</span>
+                </div>
+              )}
             </div>
           </div>
 

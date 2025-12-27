@@ -1,5 +1,6 @@
 import localDB from '../lib/localDatabase';
 
+
 // Enhanced error handling wrapper
 const withErrorHandling = async (operation, fallback = null) => {
   try {

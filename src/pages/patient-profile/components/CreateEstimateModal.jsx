@@ -38,7 +38,9 @@ const CreateEstimateModal = ({ isOpen, onClose, appliedServices, patientId, onEs
     { value: 'dms', label: 'ДМС' }
   ];
 
-  const handleCreate = async () => {
+  const handleSubmit = async (e) => {
+    e?.preventDefault();
+    
     if (!paymentMethod) {
       alert('Пожалуйста, выберите тип оплаты');
       return;
@@ -63,9 +65,25 @@ const CreateEstimateModal = ({ isOpen, onClose, appliedServices, patientId, onEs
       number: `EST-${Date.now()}`
     };
 
-    await onEstimateCreated(estimateData);
-    setLoading(false);
-    onClose();
+    try {
+      await onEstimateCreated(estimateData);
+      
+      // Dispatch events to notify other components
+      window.dispatchEvent(new CustomEvent('estimateCreated', { 
+        detail: { patientId, estimateId: estimateData?.number } 
+      }));
+      
+      window.dispatchEvent(new CustomEvent('notificationSync', { 
+        detail: { action: 'estimate_created', patientId } 
+      }));
+
+      setLoading(false);
+      onClose();
+    } catch (error) {
+      console.error('Error creating estimate:', error);
+      setLoading(false);
+      alert('Ошибка при создании сметы');
+    }
   };
 
   const remainingAmount = totalAmount - parseFloat(paidAmount || 0);
@@ -197,7 +215,7 @@ const CreateEstimateModal = ({ isOpen, onClose, appliedServices, patientId, onEs
             variant="default"
             size="md"
             iconName="Check"
-            onClick={handleCreate}
+            onClick={handleSubmit}
             disabled={loading || !paymentMethod}
             className="flex-1"
           >

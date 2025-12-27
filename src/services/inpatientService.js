@@ -1,4 +1,5 @@
 import localDB from '../lib/localDatabase';
+import realtimeSyncService from './realtimeSync';
 
 // Enhanced error handling wrapper
 const withErrorHandling = async (operation, fallback = null) => {
@@ -37,9 +38,17 @@ const InpatientService = {
   async getInpatients() {
     return withErrorHandling(
       async () => {
+        console.log('🔍 [InpatientService] Starting getInpatients fetch...');
+        
         let inpatients = localDB?.select('inpatients') || [];
         const patients = localDB?.select('patients') || [];
         const estimates = localDB?.select('estimates') || [];
+        
+        console.log('📊 [InpatientService] Data counts:', {
+          inpatients: inpatients?.length,
+          patients: patients?.length,
+          estimates: estimates?.length
+        });
         
         // Track patients already in inpatient records
         const inpatientPatientIds = new Set(inpatients?.map(inp => inp?.patientId || inp?.patient_id));
@@ -50,39 +59,94 @@ const InpatientService = {
           return {
             ...inpatient,
             patients: patient || {},
-            source: 'inpatient_record'
+            source: 'inpatient_record',
+            name: patient?.name || inpatient?.name || 'Unknown',
+            medicalRecordNumber: patient?.medicalRecordNumber || patient?.medical_record_number || inpatient?.medicalRecordNumber || '',
+            roomNumber: inpatient?.room_number || inpatient?.roomNumber,
+            roomType: inpatient?.room_type || inpatient?.roomType,
+            admissionDate: inpatient?.admission_date || inpatient?.admissionDate,
+            attendingPhysician: inpatient?.attending_physician || inpatient?.attendingPhysician || patient?.attendingPhysician || 'НеUnnamed',
+            treatmentStatus: inpatient?.treatment_status || inpatient?.treatmentStatus || 'active',
+            estimatedDischarge: inpatient?.estimated_discharge || inpatient?.estimatedDischarge,
+            billingStatus: inpatient?.billing_status || inpatient?.billingStatus
           };
         });
         
-        // Find patients with active placement services who are NOT in inpatient records
+        console.log('✅ [InpatientService] Enriched inpatients:', enrichedInpatients?.length);
+        
+        // Find patients with placement services from ANY estimate (regardless of status)
         const placementBasedPatients = [];
         
         patients?.forEach(patient => {
           // Skip if already in inpatient records
           if (inpatientPatientIds?.has(patient?.id)) {
+            console.log(`⏭️ [InpatientService] Skipping patient ${patient?.name || patient?.id} - already in inpatient records`);
             return;
           }
           
-          // Find active estimates for this patient (handle both field name formats)
+          // Find ALL estimates for this patient (not just active/paid ones)
           const patientEstimates = estimates?.filter(est => {
             const estPatientId = est?.patientId || est?.patient_id;
-            return estPatientId === patient?.id && 
-              (est?.status === 'active' || est?.status === 'paid' || est?.status === 'partially_paid');
+            // Accept all statuses except 'cancelled'
+            const isValidStatus = est?.status !== 'cancelled';
+            return estPatientId === patient?.id && isValidStatus;
           });
+          
+          console.log(`👤 [InpatientService] Patient ${patient?.name || patient?.id}: ${patientEstimates?.length} valid estimates`);
           
           // Check each estimate for placement services
           patientEstimates?.forEach(estimate => {
-            // Check both services and estimate_items fields
             const services = estimate?.services || estimate?.estimate_items || [];
             
-            // Look for placement/accommodation services
+            console.log(`🔍 [InpatientService] Checking ${services?.length} services in estimate ${estimate?.id} for patient ${patient?.name || patient?.id}`);
+            
+            // ENHANCED LOGGING: Show all services for debugging
+            if (services?.length > 0) {
+              console.log('📋 [InpatientService] All services in estimate:', services?.map(s => ({
+                name: s?.name,
+                category: s?.category,
+                code: s?.code || s?.service_code
+              })));
+            }
+            
+            // Look for placement/accommodation services with BROADER search
             const placementService = services?.find(service => {
               const category = (service?.category || '')?.toLowerCase();
               const name = (service?.name || '')?.toLowerCase();
-              return category?.includes('размещение') || 
-                     category?.includes('placement') ||
-                     name?.includes('палата') ||
-                     name?.includes('размещение');
+              const code = (service?.code || service?.service_code || '')?.toLowerCase();
+              
+              // Expanded search criteria to catch more variations
+              const isPlacement = 
+                category?.includes('размещение') || 
+                category?.includes('placement') ||
+                category?.includes('госпитализ') ||
+                category?.includes('hospitalization') ||
+                name?.includes('палата') ||
+                name?.includes('размещение') ||
+                name?.includes('койко') ||
+                name?.includes('bed') ||
+                name?.includes('room') ||
+                code?.includes('room') ||
+                code?.includes('bed') ||
+                code?.includes('plac');
+              
+              if (isPlacement) {
+                console.log('✅ [InpatientService] FOUND placement service:', {
+                  patient: patient?.name || patient?.id,
+                  service: service?.name,
+                  category: service?.category,
+                  code: service?.code || service?.service_code,
+                  estimateStatus: estimate?.status
+                });
+              } else {
+                console.log('❌ [InpatientService] NOT placement:', {
+                  name: service?.name,
+                  category: service?.category,
+                  code: service?.code || service?.service_code
+                });
+              }
+              
+              return isPlacement;
             });
             
             if (placementService) {
@@ -107,15 +171,16 @@ const InpatientService = {
                 roomNumber = 'Стандарт';
               }
               
-              // Extract days from service or estimate total_days
               const days = placementService?.days || estimate?.total_days || estimate?.totalDays || placementService?.quantity || 1;
               const admissionDate = estimate?.createdAt || estimate?.created_at || new Date()?.toISOString();
               
               // Create inpatient-like record from placement service
-              placementBasedPatients?.push({
+              const inpatientRecord = {
                 id: `placement_${patient?.id}_${estimate?.id}`,
                 patientId: patient?.id,
                 patient_id: patient?.id,
+                name: patient?.name || 'Unknown Patient',
+                medicalRecordNumber: patient?.medicalRecordNumber || patient?.medical_record_number || '',
                 room_number: roomNumber,
                 roomNumber: roomNumber,
                 room_type: roomType,
@@ -138,13 +203,36 @@ const InpatientService = {
                 estimateId: estimate?.id,
                 placementServiceId: placementService?.id || placementService?.service_id,
                 totalDays: days
+              };
+              
+              placementBasedPatients?.push(inpatientRecord);
+              console.log('✨ [InpatientService] Created placement-based inpatient:', {
+                patient: patient?.name || patient?.id,
+                roomType,
+                roomNumber,
+                days,
+                estimateStatus: estimate?.status,
+                record: inpatientRecord
               });
             }
           });
         });
         
+        console.log('🏥 [InpatientService] Placement-based inpatients:', placementBasedPatients?.length);
+        
         // Combine both sources
         const allPatients = [...enrichedInpatients, ...placementBasedPatients];
+        
+        console.log('📋 [InpatientService] Total inpatients to return:', allPatients?.length);
+        console.log('📊 [InpatientService] Final breakdown:', {
+          fromInpatientTable: enrichedInpatients?.length,
+          fromPlacementServices: placementBasedPatients?.length,
+          total: allPatients?.length
+        });
+        
+        if (allPatients?.length > 0) {
+          console.log('📝 [InpatientService] Sample patient data:', allPatients?.[0]);
+        }
         
         return { success: true, data: allPatients };
       },
@@ -213,17 +301,39 @@ const InpatientService = {
   async getRoomCapacity() {
     return withErrorHandling(
       async () => {
+        const defaultRoomTypes = {
+          'economy': { type: 'economy', capacity: 10, occupied: 0, occupiedBeds: [] },
+          'standard': { type: 'standard', capacity: 15, occupied: 0, occupiedBeds: [] },
+          'comfort': { type: 'comfort', capacity: 8, occupied: 0, occupiedBeds: [] },
+          'vip': { type: 'vip', capacity: 5, occupied: 0, occupiedBeds: [] }
+        };
+        
         const rooms = localDB?.select('rooms') || [];
         let inpatients = localDB?.select('inpatients', { status: 'active' }) || [];
         const patients = localDB?.select('patients') || [];
         const estimates = localDB?.select('estimates') || [];
         
-        // Track occupied beds by room type from multiple sources
-        const occupancyByType = {};
+        const occupancyByType = rooms?.length > 0 ? {} : { ...defaultRoomTypes };
         
-        // Initialize capacity by room type
-        rooms?.forEach(room => {
-          let roomType = room?.type || 'standard';
+        if (rooms?.length > 0) {
+          rooms?.forEach(room => {
+            let roomType = room?.type || 'standard';
+            if (!occupancyByType?.[roomType]) {
+              occupancyByType[roomType] = {
+                type: roomType,
+                capacity: 0,
+                occupied: 0,
+                occupiedBeds: []
+              };
+            }
+            occupancyByType[roomType].capacity += room?.totalBeds || 0;
+          });
+        }
+        
+        inpatients?.forEach(inpatient => {
+          let roomType = inpatient?.room_type || inpatient?.roomType || 'standard';
+          const patId = inpatient?.patientId || inpatient?.patient_id;
+          
           if (!occupancyByType?.[roomType]) {
             occupancyByType[roomType] = {
               type: roomType,
@@ -232,41 +342,28 @@ const InpatientService = {
               occupiedBeds: []
             };
           }
-          occupancyByType[roomType].capacity += room?.totalBeds || 0;
-        });
-        
-        // Count occupied beds from active inpatient records
-        inpatients?.forEach(inpatient => {
-          const room = rooms?.find(r => r?.id === (inpatient?.roomId || inpatient?.room_id));
-          if (room) {
-            let roomType = room?.type || 'standard';
-            const patId = inpatient?.patientId || inpatient?.patient_id;
-            if (occupancyByType?.[roomType] && !occupancyByType?.[roomType]?.occupiedBeds?.includes(patId)) {
-              occupancyByType[roomType].occupied += 1;
-              occupancyByType?.[roomType]?.occupiedBeds?.push(patId);
-            }
+          
+          if (!occupancyByType?.[roomType]?.occupiedBeds?.includes(patId)) {
+            occupancyByType[roomType].occupied += 1;
+            occupancyByType?.[roomType]?.occupiedBeds?.push(patId);
           }
         });
         
-        // Count occupied beds from active placement services in estimates
+        // Count patients with placement services (accept all non-cancelled estimates)
         patients?.forEach(patient => {
-          // Skip if patient already counted in inpatients
           if (inpatients?.some(inp => (inp?.patientId || inp?.patient_id) === patient?.id)) {
             return;
           }
           
-          // Find patient's estimates
           const patientEstimates = estimates?.filter(est => {
             const estPatientId = est?.patientId || est?.patient_id;
-            return estPatientId === patient?.id && 
-              (est?.status === 'active' || est?.status === 'paid' || est?.status === 'partially_paid');
+            // Accept all statuses except cancelled
+            return estPatientId === patient?.id && est?.status !== 'cancelled';
           });
           
-          // Check for placement services in estimates
           patientEstimates?.forEach(estimate => {
             const services = estimate?.services || estimate?.estimate_items || [];
             
-            // Look for placement/accommodation services
             const placementService = services?.find(service => {
               const category = (service?.category || '')?.toLowerCase();
               const name = (service?.name || '')?.toLowerCase();
@@ -277,8 +374,7 @@ const InpatientService = {
             });
             
             if (placementService) {
-              // Determine room type from service name or code
-              let roomType = 'standard'; // default
+              let roomType = 'standard';
               const serviceName = (placementService?.name || '')?.toLowerCase();
               const serviceCode = (placementService?.code || placementService?.service_code || '')?.toLowerCase();
               
@@ -292,8 +388,16 @@ const InpatientService = {
                 roomType = 'standard';
               }
               
-              // Add to occupancy if not already counted
-              if (occupancyByType?.[roomType] && !occupancyByType?.[roomType]?.occupiedBeds?.includes(patient?.id)) {
+              if (!occupancyByType?.[roomType]) {
+                occupancyByType[roomType] = {
+                  type: roomType,
+                  capacity: defaultRoomTypes?.[roomType]?.capacity || 10,
+                  occupied: 0,
+                  occupiedBeds: []
+                };
+              }
+              
+              if (!occupancyByType?.[roomType]?.occupiedBeds?.includes(patient?.id)) {
                 occupancyByType[roomType].occupied += 1;
                 occupancyByType?.[roomType]?.occupiedBeds?.push(patient?.id);
               }
@@ -301,13 +405,20 @@ const InpatientService = {
           });
         });
         
-        // Convert to array format expected by dashboard
-        const capacityData = Object.values(occupancyByType)?.map(item => ({
-          type: item?.type,
-          capacity: item?.capacity,
-          occupied: item?.occupied,
-          available: item?.capacity - item?.occupied
-        }));
+        const capacityData = Object.keys(defaultRoomTypes)?.map(roomType => {
+          if (occupancyByType?.[roomType]) {
+            return {
+              type: occupancyByType?.[roomType]?.type,
+              capacity: occupancyByType?.[roomType]?.capacity || defaultRoomTypes?.[roomType]?.capacity,
+              occupied: occupancyByType?.[roomType]?.occupied,
+              available: (occupancyByType?.[roomType]?.capacity || defaultRoomTypes?.[roomType]?.capacity) - occupancyByType?.[roomType]?.occupied
+            };
+          }
+          return {
+            ...defaultRoomTypes?.[roomType],
+            available: defaultRoomTypes?.[roomType]?.capacity
+          };
+        });
         
         return { success: true, data: capacityData };
       },
@@ -460,4 +571,107 @@ function calculateDischargeDate(admissionDate, days) {
   discharge?.setDate(discharge?.getDate() + days);
   
   return discharge?.toISOString();
+}
+
+async function createInpatientRecord(recordData) {
+  try {
+    const records = JSON.parse(localStorage.getItem('extramed_inpatient_records') || '[]');
+    
+    const newRecord = {
+      id: crypto.randomUUID(),
+      ...recordData,
+      created_at: new Date()?.toISOString(),
+      updated_at: new Date()?.toISOString()
+    };
+
+    records?.push(newRecord);
+    localStorage.setItem('extramed_inpatient_records', JSON.stringify(records));
+    
+    // ✅ NEW: Real-time sync notification
+    realtimeSyncService?.syncInpatientRecords('create', newRecord);
+
+    // Legacy event support
+    window.dispatchEvent(new CustomEvent('inpatientRecordCreated', {
+      detail: newRecord
+    }));
+
+    return {
+      success: true,
+      data: newRecord
+    };
+  } catch (error) {
+    console.error('Error creating inpatient record:', error);
+    return {
+      success: false,
+      error: error?.message
+    };
+  }
+}
+
+async function updateInpatientRecord(recordId, updates) {
+  try {
+    const records = JSON.parse(localStorage.getItem('extramed_inpatient_records') || '[]');
+    const index = records?.findIndex(r => r?.id === recordId);
+
+    if (index === -1) {
+      return {
+        success: false,
+        error: 'Inpatient record not found'
+      };
+    }
+
+    records[index] = {
+      ...records?.[index],
+      ...updates,
+      updated_at: new Date()?.toISOString()
+    };
+
+    localStorage.setItem('extramed_inpatient_records', JSON.stringify(records));
+    
+    // ✅ NEW: Real-time sync notification
+    realtimeSyncService?.syncInpatientRecords('update', records?.[index]);
+
+    // Legacy event support
+    window.dispatchEvent(new CustomEvent('inpatientRecordUpdated', {
+      detail: records[index]
+    }));
+
+    return {
+      success: true,
+      data: records?.[index]
+    };
+  } catch (error) {
+    console.error('Error updating inpatient record:', error);
+    return {
+      success: false,
+      error: error?.message
+    };
+  }
+}
+
+async function deleteInpatientRecord(recordId) {
+  try {
+    const records = JSON.parse(localStorage.getItem('extramed_inpatient_records') || '[]');
+    const filteredRecords = records?.filter(r => r?.id !== recordId);
+
+    localStorage.setItem('extramed_inpatient_records', JSON.stringify(filteredRecords));
+    
+    // ✅ NEW: Real-time sync notification
+    realtimeSyncService?.syncInpatientRecords('delete', { id: recordId });
+
+    // Legacy event support
+    window.dispatchEvent(new CustomEvent('inpatientRecordDeleted', {
+      detail: { id: recordId }
+    }));
+
+    return {
+      success: true
+    };
+  } catch (error) {
+    console.error('Error deleting inpatient record:', error);
+    return {
+      success: false,
+      error: error?.message
+    };
+  }
 }

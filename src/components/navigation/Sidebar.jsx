@@ -7,57 +7,57 @@ const Sidebar = ({ isCollapsed = false, onToggleCollapse }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const navigationItems = [
-  {
-    section: 'Панель управления',
-    items: [
     {
-      label: 'Главная панель',
-      path: '/main-dashboard',
-      icon: 'LayoutDashboard'
-    }]
-
-  },
-  {
-    section: 'Пациенты',
-    items: [
-    {
-      label: 'Справочник пациентов',
-      path: '/patient-directory',
-      icon: 'Users'
+      section: 'Панель управления',
+      items: [
+        {
+          label: 'Главная панель',
+          path: '/main-dashboard',
+          icon: 'LayoutDashboard'
+        },
+        {
+          label: 'Справочник персонала',
+          path: '/staff-directory',
+          icon: 'UserCog'
+        }
+      ]
     },
     {
-      label: 'Профиль пациента',
-      path: '/patient-profile',
-      icon: 'UserCircle'
-    }]
-
-  },
-  {
-    section: 'Стационар',
-    items: [
-    {
-      label: 'Журнал стационара',
-      path: '/inpatient-journal',
-      icon: 'Bed'
-    }]
-
-  },
-  {
-    section: 'Финансы',
-    items: [
-    {
-      label: 'Создание сметы',
-      path: '/estimate-creation-and-management',
-      icon: 'FileText'
+      section: 'Пациенты',
+      items: [
+        {
+          label: 'Справочник пациентов',
+          path: '/patient-directory',
+          icon: 'Users'
+        }
+      ]
     },
     {
-      label: 'Отчеты',
-      path: '/reports-dashboard',
-      icon: 'BarChart3'
-    }]
-
-  }];
-
+      section: 'Стационар',
+      items: [
+        {
+          label: 'Журнал стационара',
+          path: '/inpatient-journal',
+          icon: 'Bed'
+        }
+      ]
+    },
+    {
+      section: 'Финансы',
+      items: [
+        {
+          label: 'Создание сметы',
+          path: '/estimate-creation-and-management',
+          icon: 'FileText'
+        },
+        {
+          label: 'Отчеты',
+          path: '/reports-dashboard',
+          icon: 'BarChart3'
+        }
+      ]
+    }
+  ];
 
   const isActiveRoute = (path) => {
     return location?.pathname === path;

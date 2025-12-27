@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import MedicalRecordPrintTemplate from '../../../components/MedicalRecordPrintTemplate';
 
 const DocumentsTab = ({ documents, onUpload, patient, medicalHistory }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -40,34 +41,11 @@ const DocumentsTab = ({ documents, onUpload, patient, medicalHistory }) => {
   };
 
   const handlePrintMedicalRecord = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Пожалуйста, разрешите всплывающие окна для печати');
-      return;
-    }
+    setShowPrintPreview(true);
+  };
 
-    // Import and render the template
-    import('../../../components/MedicalRecordPrintTemplate')?.then(({ default: MedicalRecordPrintTemplate }) => {
-      const { createRoot } = require('react-dom/client');
-      const container = printWindow?.document?.createElement('div');
-      printWindow?.document?.body?.appendChild(container);
-      
-      const root = createRoot(container);
-      root.render(
-        React.createElement(MedicalRecordPrintTemplate, {
-          patient: patient,
-          medicalHistory: medicalHistory,
-          admissionDate: new Date()?.toISOString(),
-          dischargeDate: null
-        })
-      );
-
-      // Wait for content to render, then print
-      setTimeout(() => {
-        printWindow.document.title = `Медицинская карта ${patient?.medicalRecordNumber || patient?.id || ''}`;
-        printWindow?.print();
-      }, 500);
-    });
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -188,6 +166,66 @@ const DocumentsTab = ({ documents, onUpload, patient, medicalHistory }) => {
           <p className="text-sm md:text-base caption text-muted-foreground">
             Нет документов в выбранной категории
           </p>
+        </div>
+      )}
+      {showPrintPreview && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 overflow-auto">
+          <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="bg-card rounded-lg w-full max-w-4xl">
+              <div className="flex justify-between items-center p-4 border-b border-border sticky top-0 bg-card z-10">
+                <h3 className="text-lg font-heading font-semibold">Предпросмотр медицинской карты</h3>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="primary" 
+                    size="sm"
+                    iconName="Printer"
+                    iconPosition="left"
+                    onClick={handlePrint}
+                  >
+                    Печать
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowPrintPreview(false)}
+                  >
+                    Закрыть
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-4 bg-white">
+                <style>{`
+                  @media print {
+                    body * {
+                      visibility: hidden;
+                    }
+                    .print-content, .print-content * {
+                      visibility: visible;
+                    }
+                    .print-content {
+                      position: absolute;
+                      left: 0;
+                      top: 0;
+                      width: 100%;
+                    }
+                    @page {
+                      size: A4;
+                      margin: 15mm;
+                    }
+                  }
+                `}</style>
+                <div className="print-content">
+                  <MedicalRecordPrintTemplate
+                    patient={patient}
+                    medicalHistory={medicalHistory}
+                    admissionDate={new Date()?.toISOString()}
+                    dischargeDate={null}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

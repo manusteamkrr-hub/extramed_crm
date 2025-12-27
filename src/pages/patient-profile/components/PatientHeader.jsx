@@ -82,7 +82,9 @@ const PatientHeader = ({ patient, onEdit }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs md:text-sm caption text-muted-foreground">Дата рождения</p>
-                <p className="text-sm md:text-base font-body font-medium text-foreground mt-0.5">{patient?.dateOfBirth}</p>
+                <p className="text-sm md:text-base font-body font-medium text-foreground mt-0.5">
+                  {patient?.dateOfBirth || 'Не указана'}
+                </p>
               </div>
             </div>
 
@@ -92,7 +94,9 @@ const PatientHeader = ({ patient, onEdit }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs md:text-sm caption text-muted-foreground">Мед. карта</p>
-                <p className="text-sm md:text-base font-body font-medium text-foreground mt-0.5 data-text">{patient?.medicalRecordNumber}</p>
+                <p className="text-sm md:text-base font-body font-medium text-foreground mt-0.5 data-text">
+                  {patient?.medicalRecordNumber || 'Не указана'}
+                </p>
               </div>
             </div>
 
@@ -102,7 +106,9 @@ const PatientHeader = ({ patient, onEdit }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs md:text-sm caption text-muted-foreground">Телефон</p>
-                <p className="text-sm md:text-base font-body font-medium text-foreground mt-0.5 data-text">{patient?.phone}</p>
+                <p className="text-sm md:text-base font-body font-medium text-foreground mt-0.5 data-text">
+                  {patient?.phone || 'Не указан'}
+                </p>
               </div>
             </div>
 
@@ -112,7 +118,9 @@ const PatientHeader = ({ patient, onEdit }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs md:text-sm caption text-muted-foreground">Возраст</p>
-                <p className="text-sm md:text-base font-body font-medium text-foreground mt-0.5">{patient?.age} лет</p>
+                <p className="text-sm md:text-base font-body font-medium text-foreground mt-0.5">
+                  {patient?.age ? `${patient?.age} лет` : 'Не указан'}
+                </p>
               </div>
             </div>
           </div>

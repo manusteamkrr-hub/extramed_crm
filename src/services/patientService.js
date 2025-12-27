@@ -1,5 +1,6 @@
 import localDB from '../lib/localDatabase';
 import realtimeSyncService from './realtimeSync';
+import dataSyncService from './dataSyncService';
 
 // Enhanced error handling wrapper
 const withErrorHandling = async (operation, fallback = null) => {
@@ -89,6 +90,9 @@ const patientService = {
         };
         
         localDB?.safeSetItem('extramed_patients', patients);
+        
+        // ✅ NEW: Trigger automatic data synchronization
+        await dataSyncService?.syncPatientData(patientId, updates);
         
         // ✅ NEW: Real-time sync notification
         realtimeSyncService?.syncPatients('update', patients?.[index]);

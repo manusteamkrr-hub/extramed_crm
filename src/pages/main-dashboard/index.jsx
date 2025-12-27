@@ -4,6 +4,7 @@ import CapacityOverview from './components/CapacityOverview';
 import UrgentNotificationsList from './components/UrgentNotificationsList';
 import QuickAccessShortcuts from './components/QuickAccessShortcuts';
 import SystemHealthIndicator from './components/SystemHealthIndicator';
+import Layout from '../../components/navigation/Layout';
 import { useNavigate } from 'react-router-dom';
 import patientServiceInstance from '../../services/patientService';
 import inpatientService from '../../services/inpatientService';
@@ -431,88 +432,92 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-[1920px] mx-auto space-y-6 md:space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex flex-col gap-2 md:gap-3">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-heading font-semibold text-foreground">
-              Главная панель
-            </h1>
-            <p className="text-sm md:text-base caption text-muted-foreground">
-              Обзор текущего состояния клиники и ключевых показателей
-            </p>
-          </div>
-          
-          <button
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-background hover:bg-muted transition-colors ${
-              isRefreshing ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            title="Обновить данные"
-          >
-            <RefreshCw 
-              className={`w-5 h-5 text-foreground ${isRefreshing ? 'animate-spin' : ''}`} 
-            />
-            <span className="text-sm font-medium text-foreground hidden md:inline">
-              {isRefreshing ? 'Обновление...' : 'Обновить'}
-            </span>
-          </button>
-        </div>
-
-        {/* ✅ Error alert with retry option */}
-        {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-red-900 mb-1">
-                Ошибка подключения к базе данных
-              </h3>
-              <p className="text-sm text-red-700 mb-2">
-                {error?.message || 'Не удалось загрузить данные. Проверьте подключение к интернету и настройки Supabase.'}
+    <Layout userRole={currentRole} onRoleChange={handleRoleChange}>
+      <div className="min-h-screen bg-background">
+        <div className="max-w-[1920px] mx-auto w-full space-y-4 sm:space-y-6 md:space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-heading font-semibold text-foreground">
+                Главная панель
+              </h1>
+              <p className="text-xs sm:text-sm md:text-base caption text-muted-foreground">
+                Обзор текущего состояния клиники и ключевых показателей
               </p>
-              {retryCount >= 3 && (
-                <button
-                  onClick={() => {
-                    setRetryCount(0);
-                    setError(null);
-                    loadDashboardData();
-                  }}
-                  className="text-sm font-medium text-red-600 hover:text-red-700 underline"
-                >
-                  Попробовать снова
-                </button>
-              )}
             </div>
+            
+            <button
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className={`
+                flex items-center justify-center gap-2 px-3 py-2 sm:px-4 rounded-lg 
+                border border-border bg-background hover:bg-muted transition-colors
+                self-start sm:self-auto touch-manipulation
+                ${isRefreshing ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}
+              `}
+              title="Обновить данные"
+            >
+              <RefreshCw 
+                className={`w-4 h-4 sm:w-5 sm:h-5 text-foreground ${isRefreshing ? 'animate-spin' : ''}`} 
+              />
+              <span className="text-xs sm:text-sm font-medium text-foreground">
+                {isRefreshing ? 'Обновление...' : 'Обновить'}
+              </span>
+            </button>
           </div>
-        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {renderMetricCards()?.map((metric, index) => (
-            <MetricCard key={index} {...metric} loading={loading} />
-          ))}
-        </div>
+          {error && !loading && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-xs sm:text-sm font-semibold text-red-900 mb-1">
+                  Ошибка подключения к базе данных
+                </h3>
+                <p className="text-xs sm:text-sm text-red-700 mb-2">
+                  {error?.message || 'Не удалось загрузить данные. Проверьте подключение к интернету и настройки Supabase.'}
+                </p>
+                {retryCount >= 3 && (
+                  <button
+                    onClick={() => {
+                      setRetryCount(0);
+                      setError(null);
+                      loadDashboardData();
+                    }}
+                    className="text-xs sm:text-sm font-medium text-red-600 hover:text-red-700 underline active:text-red-800"
+                  >
+                    Попробовать снова
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          <CapacityOverview capacityData={capacityData} loading={loading} />
-          <UrgentNotificationsList
-            notifications={notifications}
-            loading={loading}
-            onViewAll={handleViewAllNotifications}
-            onClearNotification={handleClearNotification}
-            onClearAll={handleClearAllNotifications}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-          <div className="lg:col-span-2">
-            <QuickAccessShortcuts userRole={currentRole} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            {renderMetricCards()?.map((metric, index) => (
+              <MetricCard key={index} {...metric} loading={loading} />
+            ))}
           </div>
-          <div className="lg:col-span-1">
-            <SystemHealthIndicator systemStatus={systemStatus} loading={loading} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+            <CapacityOverview capacityData={capacityData} loading={loading} />
+            <UrgentNotificationsList
+              notifications={notifications}
+              loading={loading}
+              onViewAll={handleViewAllNotifications}
+              onClearNotification={handleClearNotification}
+              onClearAll={handleClearAllNotifications}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+            <div className="lg:col-span-2">
+              <QuickAccessShortcuts userRole={currentRole} />
+            </div>
+            <div className="lg:col-span-1">
+              <SystemHealthIndicator systemStatus={systemStatus} loading={loading} />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

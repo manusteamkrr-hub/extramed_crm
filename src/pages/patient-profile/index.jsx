@@ -37,7 +37,7 @@ export default function PatientProfile() {
     if (!patientId) return;
 
     console.log('🔄 Setting up real-time sync listeners for patient profile');
-    
+
     // Subscribe to patient changes
     const unsubscribePatients = realtimeSyncService?.subscribe('patients', (event) => {
       console.log('📡 Patients sync event:', event);
@@ -74,7 +74,7 @@ export default function PatientProfile() {
 
   const loadPatientData = async () => {
     setLoading(true);
-    
+
     const patientResult = await patientService?.getPatientById(patientId);
     if (patientResult?.success && patientResult?.data) {
       const p = patientResult?.data;
@@ -107,14 +107,14 @@ export default function PatientProfile() {
     const historyResult = await medicalHistoryService?.getMedicalHistory(patientId);
     if (historyResult?.success) {
       setMedicalHistory({
-        diagnoses: historyResult?.data?.diagnoses?.map(d => ({
+        diagnoses: historyResult?.data?.diagnoses?.map((d) => ({
           code: d?.code,
           description: d?.description,
           diagnosedDate: d?.diagnosed_date,
           physician: d?.physician,
           isPrimary: d?.is_primary
         })),
-        medications: historyResult?.data?.medications?.map(m => ({
+        medications: historyResult?.data?.medications?.map((m) => ({
           name: m?.name,
           dosage: m?.dosage,
           startDate: m?.start_date,
@@ -122,7 +122,7 @@ export default function PatientProfile() {
           prescribedBy: m?.prescribed_by,
           isActive: m?.is_active
         })),
-        allergies: historyResult?.data?.allergies?.map(a => ({
+        allergies: historyResult?.data?.allergies?.map((a) => ({
           allergen: a?.allergen,
           reaction: a?.reaction,
           severity: a?.severity
@@ -141,15 +141,15 @@ export default function PatientProfile() {
         const paid = parseFloat(e?.paidAmount || e?.paid_amount) || 0;
         return sum + (total - paid);
       }, 0);
-      
+
       setFinancialData({
         totalEstimates: estimates?.length,
         totalPaid,
         totalOutstanding,
-        estimates: estimates?.map(e => {
+        estimates: estimates?.map((e) => {
           // Use services field if available, otherwise fall back to estimate_items
           const servicesList = e?.services || e?.estimate_items || [];
-          
+
           return {
             id: e?.id,
             number: e?.number,
@@ -161,7 +161,7 @@ export default function PatientProfile() {
             totalAmount: parseFloat(e?.totalAmount || e?.total_amount) || 0,
             paidAmount: parseFloat(e?.paidAmount || e?.paid_amount) || 0,
             outstandingAmount: (parseFloat(e?.totalAmount || e?.total_amount) || 0) - (parseFloat(e?.paidAmount || e?.paid_amount) || 0),
-            services: servicesList?.map(s => ({
+            services: servicesList?.map((s) => ({
               id: s?.id || s?.service_id,
               code: s?.code || s?.service_code,
               name: s?.name,
@@ -240,12 +240,12 @@ export default function PatientProfile() {
   const mockDocuments = [];
 
   const tabs = [
-    { id: 'demographics', label: 'Демография', icon: 'user' },
-    { id: 'medical', label: 'Медицинская история', icon: 'heart' },
-    { id: 'timeline', label: 'График лечения', icon: 'clock' },
-    { id: 'financial', label: 'Финансы', icon: 'dollar-sign' },
-    { id: 'documents', label: 'Документы', icon: 'file-text' }
-  ];
+  { id: 'demographics', label: 'Демография', icon: 'user' },
+  { id: 'medical', label: 'Медицинская история', icon: 'heart' },
+  { id: 'timeline', label: 'График лечения', icon: 'clock' },
+  { id: 'financial', label: 'Финансы', icon: 'dollar-sign' },
+  { id: 'documents', label: 'Документы', icon: 'file-text' }];
+
 
   const displayPatient = patient || mockPatient;
   const displayMedicalHistory = medicalHistory || mockMedicalHistory;
@@ -387,14 +387,14 @@ export default function PatientProfile() {
                     flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 text-sm md:text-base font-body font-medium
                     transition-smooth border-b-2 whitespace-nowrap
                     ${activeTab === tab?.id ?
-              'text-primary border-primary bg-primary/5' : 'text-muted-foreground border-transparent hover:text-foreground hover:bg-muted'}
+                'text-primary border-primary bg-primary/5' : 'text-muted-foreground border-transparent hover:text-foreground hover:bg-muted'}
                   `
-              }>
+                }>
 
                 <Icon
-                name={tab?.icon}
-                size={18}
-                color={activeTab === tab?.id ? 'var(--color-primary)' : 'var(--color-muted-foreground)'} />
+                  name={tab?.icon}
+                  size={18}
+                  color={activeTab === tab?.id ? 'var(--color-primary)' : 'var(--color-muted-foreground)'} />
 
                 <span>{tab?.label}</span>
               </button>
@@ -403,53 +403,53 @@ export default function PatientProfile() {
           </div>
 
           <div className="p-4 md:p-6 lg:p-8">
-            {loading ? (
-              <div className="text-center py-12">
+            {loading ?
+            <div className="text-center py-12">
                 <p className="text-muted-foreground">Загрузка данных...</p>
-              </div>
-            ) : (
-              <>
-                {activeTab === 'demographics' &&
-                <DemographicsTab 
-                  patient={displayPatient} 
-                  onSave={handleDemographicsSave}
-                  onPhotoUpdate={handlePhotoUpdate}
-                  isEditingFromHeader={isEditingDemographics}
-                  onEditComplete={() => setIsEditingDemographics(false)}
-                />
-                }
-                {activeTab === 'medical' &&
-                <MedicalHistoryTab
-                  medicalHistory={displayMedicalHistory}
-                  onAddDiagnosis={handleAddDiagnosis}
-                  onAddMedication={handleAddMedication}
-                  onAddAllergy={handleAddAllergy} />
+              </div> :
 
-                }
+            <>
+                {activeTab === 'demographics' &&
+              <DemographicsTab
+                patient={displayPatient}
+                onSave={handleDemographicsSave}
+                onPhotoUpdate={handlePhotoUpdate}
+                isEditingFromHeader={isEditingDemographics}
+                onEditComplete={() => setIsEditingDemographics(false)} />
+
+              }
+                {activeTab === 'medical' &&
+              <MedicalHistoryTab
+                medicalHistory={displayMedicalHistory}
+                onAddDiagnosis={handleAddDiagnosis}
+                onAddMedication={handleAddMedication}
+                onAddAllergy={handleAddAllergy} />
+
+              }
                 {activeTab === 'timeline' &&
-                <TreatmentTimelineTab timeline={mockTimeline} />
-                }
+              <TreatmentTimelineTab timeline={mockTimeline} />
+              }
                 {activeTab === 'financial' &&
-                <FinancialSummaryTab 
-                  financialData={displayFinancialData} 
-                  userRole={currentRole} 
-                  patientId={patientId}
-                  onEstimateCreated={handleEstimateCreated}
-                />
-                }
+              <FinancialSummaryTab
+                financialData={displayFinancialData}
+                userRole={currentRole}
+                patientId={patientId}
+                onEstimateCreated={handleEstimateCreated} />
+
+              }
                 {activeTab === 'documents' &&
-                <DocumentsTab 
-                  documents={mockDocuments} 
-                  onUpload={handleDocumentUpload}
-                  patient={displayPatient}
-                  medicalHistory={displayMedicalHistory}
-                />
-                }
+              <DocumentsTab
+                documents={mockDocuments}
+                onUpload={handleDocumentUpload}
+                patient={displayPatient}
+                medicalHistory={displayMedicalHistory} />
+
+              }
               </>
-            )}
+            }
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }

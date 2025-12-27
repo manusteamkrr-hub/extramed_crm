@@ -1,146 +1,78 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
+import { Activity } from 'lucide-react';
 
-const QuickAccessShortcuts = ({ userRole = 'admin' }) => {
+const QuickAccessShortcuts = () => {
   const navigate = useNavigate();
 
-  const shortcuts = {
-    admin: [
-      {
-        id: 'new-admission',
-        title: 'Новое поступление',
-        description: 'Зарегистрировать пациента',
-        icon: 'UserPlus',
-        color: 'var(--color-primary)',
-        path: '/inpatient-journal',
-        shortcut: 'Alt+N',
-      },
-      {
-        id: 'create-estimate',
-        title: 'Создать смету',
-        description: 'Новая финансовая смета',
-        icon: 'FileText',
-        color: 'var(--color-success)',
-        path: '/estimate-creation-and-management',
-        shortcut: 'Alt+E',
-      },
-      {
-        id: 'patient-search',
-        title: 'Поиск пациента',
-        description: 'Найти в справочнике',
-        icon: 'Search',
-        color: 'var(--color-warning)',
-        path: '/patient-directory',
-        shortcut: 'Alt+S',
-      },
-      {
-        id: 'reports',
-        title: 'Отчеты',
-        description: 'Финансовая аналитика',
-        icon: 'BarChart3',
-        color: 'var(--color-accent)',
-        path: '/reports-dashboard',
-        shortcut: 'Alt+R',
-      },
-      {
-        id: 'inpatient-journal',
-        title: 'Журнал стационара',
-        description: 'Текущие пациенты',
-        icon: 'Bed',
-        color: 'var(--color-secondary)',
-        path: '/inpatient-journal',
-        shortcut: 'Alt+J',
-      },
-      {
-        id: 'patient-profile',
-        title: 'Профиль пациента',
-        description: 'Медицинская карта',
-        icon: 'UserCircle',
-        color: 'var(--color-primary)',
-        path: '/patient-profile',
-        shortcut: 'Alt+P',
-      },
-    ],
-    doctor: [
-      {
-        id: 'new-admission',
-        title: 'Новое поступление',
-        description: 'Зарегистрировать пациента',
-        icon: 'UserPlus',
-        color: 'var(--color-primary)',
-        path: '/inpatient-journal',
-        shortcut: 'Alt+N',
-      },
-      {
-        id: 'patient-search',
-        title: 'Поиск пациента',
-        description: 'Найти в справочнике',
-        icon: 'Search',
-        color: 'var(--color-warning)',
-        path: '/patient-directory',
-        shortcut: 'Alt+S',
-      },
-      {
-        id: 'inpatient-journal',
-        title: 'Журнал стационара',
-        description: 'Текущие пациенты',
-        icon: 'Bed',
-        color: 'var(--color-secondary)',
-        path: '/inpatient-journal',
-        shortcut: 'Alt+J',
-      },
-      {
-        id: 'patient-profile',
-        title: 'Профиль пациента',
-        description: 'Медицинская карта',
-        icon: 'UserCircle',
-        color: 'var(--color-primary)',
-        path: '/patient-profile',
-        shortcut: 'Alt+P',
-      },
-    ],
-    accountant: [
-      {
-        id: 'create-estimate',
-        title: 'Создать смету',
-        description: 'Новая финансовая смета',
-        icon: 'FileText',
-        color: 'var(--color-success)',
-        path: '/estimate-creation-and-management',
-        shortcut: 'Alt+E',
-      },
-      {
-        id: 'reports',
-        title: 'Отчеты',
-        description: 'Финансовая аналитика',
-        icon: 'BarChart3',
-        color: 'var(--color-accent)',
-        path: '/reports-dashboard',
-        shortcut: 'Alt+R',
-      },
-      {
-        id: 'patient-search',
-        title: 'Поиск пациента',
-        description: 'Найти в справочнике',
-        icon: 'Search',
-        color: 'var(--color-warning)',
-        path: '/patient-directory',
-        shortcut: 'Alt+S',
-      },
-      {
-        id: 'patient-profile',
-        title: 'Профиль пациента',
-        description: 'Финансовая информация',
-        icon: 'UserCircle',
-        color: 'var(--color-primary)',
-        path: '/patient-profile',
-        shortcut: 'Alt+P',
-      },
-    ],
-  };
+  const shortcuts = [
+    {
+      id: 'analytics',
+      title: 'Analytics',
+      description: 'Аналитика в реальном времени',
+      icon: Activity,
+      color: 'var(--color-teal)',
+      path: '/analytics-dashboard',
+      shortcut: 'Alt+A',
+    },
+    {
+      id: 'new-admission',
+      title: 'Новое поступление',
+      description: 'Зарегистрировать пациента',
+      icon: 'UserPlus',
+      color: 'var(--color-primary)',
+      path: '/inpatient-journal',
+      shortcut: 'Alt+N',
+    },
+    {
+      id: 'create-estimate',
+      title: 'Создать смету',
+      description: 'Новая финансовая смета',
+      icon: 'FileText',
+      color: 'var(--color-success)',
+      path: '/estimate-creation-and-management',
+      shortcut: 'Alt+E',
+    },
+    {
+      id: 'patient-search',
+      title: 'Поиск пациента',
+      description: 'Найти в справочнике',
+      icon: 'Search',
+      color: 'var(--color-warning)',
+      path: '/patient-directory',
+      shortcut: 'Alt+S',
+    },
+    {
+      id: 'reports',
+      title: 'Отчеты',
+      description: 'Финансовая аналитика',
+      icon: 'BarChart3',
+      color: 'var(--color-accent)',
+      path: '/reports-dashboard',
+      shortcut: 'Alt+R',
+    },
+    {
+      id: 'inpatient-journal',
+      title: 'Журнал стационара',
+      description: 'Текущие пациенты',
+      icon: 'Bed',
+      color: 'var(--color-secondary)',
+      path: '/inpatient-journal',
+      shortcut: 'Alt+J',
+    },
+    {
+      id: 'patient-profile',
+      title: 'Профиль пациента',
+      description: 'Медицинская карта',
+      icon: 'UserCircle',
+      color: 'var(--color-primary)',
+      path: '/patient-profile',
+      shortcut: 'Alt+P',
+    },
+  ];
 
-  const roleShortcuts = shortcuts?.[userRole] || shortcuts?.admin;
+  const roleShortcuts = shortcuts;
 
   const handleShortcutClick = (path) => {
     navigate(path);

@@ -31,28 +31,6 @@ const withErrorHandling = async (operation, fallback = null) => {
   }
 };
 
-// ✅ NEW: Register notification sync callbacks
-realtimeSyncService?.registerSyncCallback('inpatient_records', 'notifications', async (action, data) => {
-  if (action === 'create' || action === 'update') {
-    console.log('🔔 Generating notifications for inpatient record change:', data);
-    await NotificationService.generateNotifications();
-  }
-});
-
-realtimeSyncService?.registerSyncCallback('estimates', 'notifications', async (action, data) => {
-  if (action === 'create' || action === 'update') {
-    console.log('🔔 Generating notifications for estimate change:', data);
-    await NotificationService.generateNotifications();
-  }
-});
-
-realtimeSyncService?.registerSyncCallback('patients', 'notifications', async (action, data) => {
-  if (action === 'create') {
-    console.log('🔔 Generating notifications for new patient:', data);
-    await NotificationService.generateNotifications();
-  }
-});
-
 const NotificationService = {
   async getNotifications({ limit = 50 } = {}) {
     return withErrorHandling(
@@ -319,5 +297,27 @@ const NotificationService = {
     );
   }
 };
+
+// ✅ Moved: Register notification sync callbacks after NotificationService definition
+realtimeSyncService?.registerSyncCallback('inpatient_records', 'notifications', async (action, data) => {
+  if (action === 'create' || action === 'update') {
+    console.log('🔔 Generating notifications for inpatient record change:', data);
+    await NotificationService?.generateNotifications();
+  }
+});
+
+realtimeSyncService?.registerSyncCallback('estimates', 'notifications', async (action, data) => {
+  if (action === 'create' || action === 'update') {
+    console.log('🔔 Generating notifications for estimate change:', data);
+    await NotificationService?.generateNotifications();
+  }
+});
+
+realtimeSyncService?.registerSyncCallback('patients', 'notifications', async (action, data) => {
+  if (action === 'create') {
+    console.log('🔔 Generating notifications for new patient:', data);
+    await NotificationService?.generateNotifications();
+  }
+});
 
 export default NotificationService;

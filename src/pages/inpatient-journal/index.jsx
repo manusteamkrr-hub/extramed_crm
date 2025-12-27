@@ -150,14 +150,24 @@ export default function InpatientJournal() {
         console.log('📊 [InpatientJournal] Raw inpatients data:', inpatientsResult?.data);
         
         const formattedPatients = inpatientsResult?.data?.map(ip => {
+          // 🔧 FIXED: Better name resolution with multiple fallbacks
+          const patientName = ip?.patients?.name || 
+                             ip?.name || 
+                             'Неизвестный пациент';
+          
+          const physicianName = ip?.attending_physician || 
+                               ip?.attendingPhysician || 
+                               ip?.patients?.attendingPhysician || 
+                               'Не назначен';
+          
           const patientData = {
             id: ip?.id,
-            name: ip?.patients?.name || ip?.name || 'Unknown',
+            name: patientName,
             medicalRecordNumber: ip?.patients?.medical_record_number || ip?.medicalRecordNumber || '',
             roomNumber: ip?.room_number || ip?.roomNumber,
             roomType: ip?.room_type || ip?.roomType,
             admissionDate: ip?.admission_date || ip?.admissionDate,
-            attendingPhysician: ip?.attending_physician || ip?.attendingPhysician,
+            attendingPhysician: physicianName,
             treatmentStatus: ip?.treatment_status || ip?.treatmentStatus,
             estimatedDischarge: ip?.estimated_discharge || ip?.estimatedDischarge,
             diagnosis: ip?.patients?.diagnosis || ip?.diagnosis || '',
@@ -396,12 +406,12 @@ export default function InpatientJournal() {
 
                   <div className="grid grid-cols-12 gap-4 flex-1">
                     <button
-                      onClick={() => handleSort('name')}
+                      onClick={() => handleSort('medicalRecordNumber')}
                       className="col-span-3 flex items-center gap-2 text-left text-xs font-caption font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-smooth"
                     >
-                      Пациент
+                      ID пациента (MRN)
                       <Icon
-                        name={sortConfig?.key === 'name' ? (sortConfig?.direction === 'asc' ? 'ChevronUp' : 'ChevronDown') : 'ChevronsUpDown'}
+                        name={sortConfig?.key === 'medicalRecordNumber' ? (sortConfig?.direction === 'asc' ? 'ChevronUp' : 'ChevronDown') : 'ChevronsUpDown'}
                         size={14}
                       />
                     </button>

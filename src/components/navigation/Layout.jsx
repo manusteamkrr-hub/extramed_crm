@@ -42,11 +42,13 @@ const Layout = ({ children, userRole = 'admin', onRoleChange }) => {
         onToggleCollapse={handleToggleSidebar}
       />
       
-      {/* Main content wrapper with proper left margin for sidebar */}
+      {/* Enhanced main content wrapper with better mobile responsiveness */}
       <div 
-        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-          isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-60'
-        }`}
+        className={`
+          flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out
+          ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-60'}
+          ml-0
+        `}
       >
         <Header
           userRole={userRole}
@@ -55,7 +57,8 @@ const Layout = ({ children, userRole = 'admin', onRoleChange }) => {
           onActionClick={handleActionClick}
         />
         
-        <main className="flex-1 overflow-y-auto scroll-smooth">
+        {/* Enhanced main with proper mobile padding */}
+        <main className="flex-1 overflow-y-auto scroll-smooth px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8">
           {children}
         </main>
       </div>

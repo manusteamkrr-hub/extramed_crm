@@ -4,12 +4,15 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 
                     import.meta.env?.NEXT_PUBLIC_SUPABASE_URL;
 
-const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 
-                        import.meta.env?.VITE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
-                        import.meta.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// CRITICAL FIX: Treat "None" string as unset value and use fallback key
+const rawAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = (rawAnonKey && rawAnonKey !== 'None' && rawAnonKey !== 'none') 
+  ? rawAnonKey 
+  : (import.meta.env?.VITE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || 
+     import.meta.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 // Track which env var is being used for better error messages
-const anonKeySource = import.meta.env?.VITE_SUPABASE_ANON_KEY 
+const anonKeySource = (rawAnonKey && rawAnonKey !== 'None' && rawAnonKey !== 'none')
   ? 'VITE_SUPABASE_ANON_KEY'
   : import.meta.env?.VITE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
     ? 'VITE_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY' :'VITE_SUPABASE_ANON_KEY (not set)';

@@ -1,4 +1,5 @@
 import localDB from '../lib/localDatabase';
+import dataSyncService from './dataSyncService';
 
 
 // Enhanced error handling wrapper
@@ -127,6 +128,9 @@ const EstimateService = {
 
         const result = await localDB?.insert('estimates', estimate);
         
+        // Trigger automatic data synchronization for room type
+        await dataSyncService?.syncEstimateData(estimate?.id, estimate);
+        
         // Create financial operation record for tracking
         await this.createFinancialOperation({
           patient_id: estimateData?.patientId,
@@ -140,6 +144,9 @@ const EstimateService = {
 
         // Trigger dashboard update
         window.dispatchEvent(new CustomEvent('financialUpdate', { detail: estimate }));
+        
+        // Notify estimate creation for sync
+        window.dispatchEvent(new CustomEvent('estimateCreated', { detail: estimate }));
 
         return {
           success: true,
@@ -186,7 +193,21 @@ const EstimateService = {
 
   async updateEstimate(id, updates) {
     return withErrorHandling(
-      () => localDB?.update('estimates', id, updates),
+      async () => {
+        const result = await localDB?.update('estimates', id, updates);
+        
+        // Trigger automatic data synchronization
+        if (result && updates?.patientId) {
+          await dataSyncService?.syncEstimateData(id, { ...result, ...updates });
+        }
+        
+        // Notify estimate update for sync
+        window.dispatchEvent(new CustomEvent('estimateUpdated', { 
+          detail: { ...result, ...updates } 
+        }));
+        
+        return result;
+      },
       null
     );
   },

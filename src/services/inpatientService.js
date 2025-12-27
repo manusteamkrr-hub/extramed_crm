@@ -1,5 +1,6 @@
 import localDB from '../lib/localDatabase';
 import realtimeSyncService from './realtimeSync';
+import dataSyncService from './dataSyncService';
 
 // Enhanced error handling wrapper
 const withErrorHandling = async (operation, fallback = null) => {
@@ -53,26 +54,63 @@ const InpatientService = {
         // Track patients already in inpatient records
         const inpatientPatientIds = new Set(inpatients?.map(inp => inp?.patientId || inp?.patient_id));
         
-        // Enrich inpatient records with patient data
-        const enrichedInpatients = inpatients?.map(inpatient => {
-          const patient = patients?.find(p => p?.id === (inpatient?.patientId || inpatient?.patient_id));
-          return {
-            ...inpatient,
-            patients: patient || {},
-            source: 'inpatient_record',
-            name: patient?.name || inpatient?.name || 'Unknown',
-            medicalRecordNumber: patient?.medicalRecordNumber || patient?.medical_record_number || inpatient?.medicalRecordNumber || '',
-            roomNumber: inpatient?.room_number || inpatient?.roomNumber,
-            roomType: inpatient?.room_type || inpatient?.roomType,
-            admissionDate: inpatient?.admission_date || inpatient?.admissionDate,
-            attendingPhysician: inpatient?.attending_physician || inpatient?.attendingPhysician || patient?.attendingPhysician || 'НеUnnamed',
-            treatmentStatus: inpatient?.treatment_status || inpatient?.treatmentStatus || 'active',
-            estimatedDischarge: inpatient?.estimated_discharge || inpatient?.estimatedDischarge,
-            billingStatus: inpatient?.billing_status || inpatient?.billingStatus
-          };
-        });
+        // ✅ ENHANCED: Enrich inpatient records with synchronized patient data
+        const enrichedInpatients = await Promise.all(
+          inpatients?.map(async (inpatient) => {
+            const patientId = inpatient?.patientId || inpatient?.patient_id;
+            const patient = patients?.find(p => p?.id === patientId);
+            
+            // ✅ NEW: Get synchronized data from data sync service
+            const syncedData = await dataSyncService?.getSyncedPatientData(patientId);
+            
+            // ✅ IMPROVED: Use synchronized patient name with better fallback
+            const patientName = syncedData?.patient?.name || 
+                               patient?.name || 
+                               inpatient?.name || 
+                               inpatient?.patients?.name || 
+                               'Неизвестный пациент';
+            
+            // ✅ IMPROVED: Use synchronized physician with proper fallback
+            const physicianName = syncedData?.patient?.attending_physician ||
+                                 syncedData?.patient?.attendingPhysician ||
+                                 inpatient?.attending_physician || 
+                                 inpatient?.attendingPhysician || 
+                                 patient?.attendingPhysician || 
+                                 patient?.attending_physician || 
+                                 'НеUnnamed';
+            
+            // ✅ NEW: Use synchronized room type from estimates if available
+            const roomTypeData = syncedData?.roomTypeData;
+            let roomType = roomTypeData?.roomType || 
+                           inpatient?.room_type || 
+                           inpatient?.roomType || 
+                           'standard';
+            let roomNumber = roomTypeData?.roomNumber || 
+                             inpatient?.room_number || 
+                             inpatient?.roomNumber || 
+                             'Не назначена';
+            
+            return {
+              ...inpatient,
+              patients: patient || {},
+              source: 'inpatient_record',
+              name: patientName,
+              medicalRecordNumber: patient?.medicalRecordNumber || patient?.medical_record_number || inpatient?.medicalRecordNumber || '',
+              roomNumber: roomNumber,
+              room_number: roomNumber,
+              roomType: roomType,
+              room_type: roomType,
+              admissionDate: inpatient?.admission_date || inpatient?.admissionDate,
+              attendingPhysician: physicianName,
+              attending_physician: physicianName,
+              treatmentStatus: inpatient?.treatment_status || inpatient?.treatmentStatus || 'active',
+              estimatedDischarge: inpatient?.estimated_discharge || inpatient?.estimatedDischarge,
+              billingStatus: inpatient?.billing_status || inpatient?.billingStatus
+            };
+          })
+        );
         
-        console.log('✅ [InpatientService] Enriched inpatients:', enrichedInpatients?.length);
+        console.log('✅ [InpatientService] Enriched inpatients with sync data:', enrichedInpatients?.length);
         
         // Find patients with placement services from ANY estimate (regardless of status)
         const placementBasedPatients = [];
@@ -105,44 +143,54 @@ const InpatientService = {
               console.log('📋 [InpatientService] All services in estimate:', services?.map(s => ({
                 name: s?.name,
                 category: s?.category,
+                categoryName: s?.categoryName || s?.category_name,
                 code: s?.code || s?.service_code
               })));
             }
             
-            // Look for placement/accommodation services with BROADER search
+            // 🔧 FIXED: Enhanced placement service detection with MUCH broader criteria
             const placementService = services?.find(service => {
-              const category = (service?.category || '')?.toLowerCase();
+              const category = (service?.category || service?.categoryName || service?.category_name || '')?.toLowerCase();
               const name = (service?.name || '')?.toLowerCase();
               const code = (service?.code || service?.service_code || '')?.toLowerCase();
               
-              // Expanded search criteria to catch more variations
+              // 🎯 COMPREHENSIVE SEARCH: Check multiple indicators of ward/room services
               const isPlacement = 
+                // Category-based detection
                 category?.includes('размещение') || 
                 category?.includes('placement') ||
                 category?.includes('госпитализ') ||
                 category?.includes('hospitalization') ||
+                category === 'ward_treatment' ||  // ✅ NEW: Direct match for ward_treatment
+                category?.includes('ward') ||      // ✅ NEW: Any ward-related category
+                category?.includes('палат') ||     // ✅ NEW: Russian "ward"
+                category?.includes('стационар') || // ✅ NEW: Russian "hospital stay"
+                
+                // Name-based detection (more flexible)
                 name?.includes('палата') ||
                 name?.includes('размещение') ||
                 name?.includes('койко') ||
                 name?.includes('bed') ||
                 name?.includes('room') ||
+                name?.includes('лечение в палате') ||  // ✅ NEW: "treatment in ward"
+                name?.includes('пребывание в палате') || // ✅ NEW: "stay in ward"
+                name?.includes('стационарное лечение') || // ✅ NEW: "inpatient treatment"
+                
+                // Code-based detection
                 code?.includes('room') ||
                 code?.includes('bed') ||
-                code?.includes('plac');
+                code?.includes('plac') ||
+                code?.includes('ward');
               
               if (isPlacement) {
                 console.log('✅ [InpatientService] FOUND placement service:', {
                   patient: patient?.name || patient?.id,
                   service: service?.name,
-                  category: service?.category,
+                  category: service?.category || service?.categoryName,
                   code: service?.code || service?.service_code,
-                  estimateStatus: estimate?.status
-                });
-              } else {
-                console.log('❌ [InpatientService] NOT placement:', {
-                  name: service?.name,
-                  category: service?.category,
-                  code: service?.code || service?.service_code
+                  estimateStatus: estimate?.status,
+                  detectionReason: category === 'ward_treatment' ? 'ward_treatment category' : name?.includes('лечение в палате') ? 'treatment in ward name' : 
+                                 'other placement indicator'
                 });
               }
               
@@ -150,29 +198,36 @@ const InpatientService = {
             });
             
             if (placementService) {
-              // Determine room type from service details
+              // Determine room type from service details with better fallback logic
               let roomType = 'standard';
               let roomNumber = 'Не назначена';
               
               const serviceName = (placementService?.name || '')?.toLowerCase();
               const serviceCode = (placementService?.code || placementService?.service_code || '')?.toLowerCase();
+              const category = (placementService?.category || placementService?.categoryName || '')?.toLowerCase();
               
-              if (serviceName?.includes('эконом') || serviceCode?.includes('economy')) {
+              // 🎯 Check service name, code, AND category for room type
+              if (serviceName?.includes('эконом') || serviceCode?.includes('economy') || category?.includes('эконом')) {
                 roomType = 'economy';
                 roomNumber = 'Эконом';
-              } else if (serviceName?.includes('vip') || serviceCode?.includes('vip')) {
+              } else if (serviceName?.includes('vip') || serviceCode?.includes('vip') || category?.includes('vip')) {
                 roomType = 'vip';
                 roomNumber = 'VIP';
-              } else if (serviceName?.includes('комфорт') || serviceCode?.includes('comfort')) {
+              } else if (serviceName?.includes('комфорт') || serviceCode?.includes('comfort') || category?.includes('комфорт')) {
                 roomType = 'comfort';
                 roomNumber = 'Комфорт';
-              } else if (serviceName?.includes('стандарт') || serviceCode?.includes('standard')) {
+              } else if (serviceName?.includes('стандарт') || serviceCode?.includes('standard') || category?.includes('стандарт')) {
                 roomType = 'standard';
                 roomNumber = 'Стандарт';
               }
               
               const days = placementService?.days || estimate?.total_days || estimate?.totalDays || placementService?.quantity || 1;
               const admissionDate = estimate?.createdAt || estimate?.created_at || new Date()?.toISOString();
+              
+              // ✅ IMPROVED: Use synchronized physician from patient profile
+              const physicianName = patient?.attendingPhysician || 
+                                  patient?.attending_physician || 
+                                  'НеUnnamed';
               
               // Create inpatient-like record from placement service
               const inpatientRecord = {
@@ -191,8 +246,8 @@ const InpatientService = {
                 estimatedDischarge: calculateDischargeDate(admissionDate, days),
                 discharge_date: calculateDischargeDate(admissionDate, days),
                 dischargeDate: calculateDischargeDate(admissionDate, days),
-                attending_physician: patient?.attendingPhysician || patient?.attending_physician || 'НеUnnamed',
-                attendingPhysician: patient?.attendingPhysician || patient?.attending_physician || 'НеUnnamed',
+                attending_physician: physicianName,
+                attendingPhysician: physicianName,
                 treatment_status: 'active',
                 treatmentStatus: 'active',
                 billing_status: estimate?.status,
@@ -212,7 +267,8 @@ const InpatientService = {
                 roomNumber,
                 days,
                 estimateStatus: estimate?.status,
-                record: inpatientRecord
+                serviceName: placementService?.name,
+                serviceCategory: placementService?.category || placementService?.categoryName
               });
             }
           });
@@ -349,7 +405,7 @@ const InpatientService = {
           }
         });
         
-        // Count patients with placement services (accept all non-cancelled estimates)
+        // 🔧 FIXED: Enhanced placement service detection matching getInpatients()
         patients?.forEach(patient => {
           if (inpatients?.some(inp => (inp?.patientId || inp?.patient_id) === patient?.id)) {
             return;
@@ -357,34 +413,52 @@ const InpatientService = {
           
           const patientEstimates = estimates?.filter(est => {
             const estPatientId = est?.patientId || est?.patient_id;
-            // Accept all statuses except cancelled
             return estPatientId === patient?.id && est?.status !== 'cancelled';
           });
           
           patientEstimates?.forEach(estimate => {
             const services = estimate?.services || estimate?.estimate_items || [];
             
+            // 🎯 USE SAME COMPREHENSIVE DETECTION as getInpatients()
             const placementService = services?.find(service => {
-              const category = (service?.category || '')?.toLowerCase();
+              const category = (service?.category || service?.categoryName || service?.category_name || '')?.toLowerCase();
               const name = (service?.name || '')?.toLowerCase();
+              const code = (service?.code || service?.service_code || '')?.toLowerCase();
+              
               return category?.includes('размещение') || 
                      category?.includes('placement') ||
+                     category?.includes('госпитализ') ||
+                     category?.includes('hospitalization') ||
+                     category === 'ward_treatment'|| category?.includes('ward') ||
+                     category?.includes('палат') ||
+                     category?.includes('стационар') ||
                      name?.includes('палата') ||
-                     name?.includes('размещение');
+                     name?.includes('размещение') ||
+                     name?.includes('койко') ||
+                     name?.includes('bed') ||
+                     name?.includes('room') ||
+                     name?.includes('лечение в палате') ||
+                     name?.includes('пребывание в палате') ||
+                     name?.includes('стационарное лечение') ||
+                     code?.includes('room') ||
+                     code?.includes('bed') ||
+                     code?.includes('plac') ||
+                     code?.includes('ward');
             });
             
             if (placementService) {
               let roomType = 'standard';
               const serviceName = (placementService?.name || '')?.toLowerCase();
               const serviceCode = (placementService?.code || placementService?.service_code || '')?.toLowerCase();
+              const category = (placementService?.category || placementService?.categoryName || '')?.toLowerCase();
               
-              if (serviceName?.includes('эконом') || serviceCode?.includes('economy')) {
+              if (serviceName?.includes('эконом') || serviceCode?.includes('economy') || category?.includes('эконом')) {
                 roomType = 'economy';
-              } else if (serviceName?.includes('vip') || serviceCode?.includes('vip')) {
+              } else if (serviceName?.includes('vip') || serviceCode?.includes('vip') || category?.includes('vip')) {
                 roomType = 'vip';
-              } else if (serviceName?.includes('комфорт') || serviceCode?.includes('comfort')) {
+              } else if (serviceName?.includes('комфорт') || serviceCode?.includes('comfort') || category?.includes('комфорт')) {
                 roomType = 'comfort';
-              } else if (serviceName?.includes('стандарт') || serviceCode?.includes('standard')) {
+              } else if (serviceName?.includes('стандарт') || serviceCode?.includes('standard') || category?.includes('стандарт')) {
                 roomType = 'standard';
               }
               

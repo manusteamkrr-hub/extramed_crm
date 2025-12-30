@@ -1,14 +1,5 @@
 import { supabase } from '../lib/supabase';
 
-const toSnakeCase = (obj) => {
-  const newObj = {};
-  for (const key in obj) {
-    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    newObj[snakeKey] = obj[key];
-  }
-  return newObj;
-};
-
 const patientService = {
   async getPatients() {
     try {
@@ -44,18 +35,15 @@ const patientService = {
   async createPatient(patientData) {
     try {
       // Generate MRN if not provided
-      const mrn = patientData.medicalRecordNumber || patientData.medical_record_number || this.generateMRN();
-      
-      // Convert camelCase to snake_case for Supabase
-      const formattedData = toSnakeCase({
-        ...patientData,
-        medical_record_number: mrn,
-        updated_at: new Date().toISOString()
-      });
+      const mrn = patientData.medicalRecordNumber || this.generateMRN();
       
       const { data, error } = await supabase
         .from('patients')
-        .insert([formattedData])
+        .insert([{
+          ...patientData,
+          medicalRecordNumber: mrn,
+          updated_at: new Date().toISOString()
+        }])
         .select()
         .single();
 
@@ -69,14 +57,12 @@ const patientService = {
 
   async updatePatient(id, updates) {
     try {
-      const formattedUpdates = toSnakeCase({
-        ...updates,
-        updated_at: new Date().toISOString()
-      });
-
       const { data, error } = await supabase
         .from('patients')
-        .update(formattedUpdates)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
         .select()
         .single();

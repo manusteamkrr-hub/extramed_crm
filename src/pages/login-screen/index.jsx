@@ -3,95 +3,61 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from 'components/ui/Button';
 import Input from 'components/ui/Input';
-import Select from 'components/ui/Select';
 import { Checkbox } from 'components/ui/Checkbox';
 import Icon from 'components/AppIcon';
 import { pageVariants, pageTransition } from '../../config/animations';
-
+import { useAuth } from '../../contexts/AuthContext';
 
 const LoginScreen = () => {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [enable2FA, setEnable2FA] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    role: ''
+    email: '',
+    password: ''
   });
   const [errors, setErrors] = useState({});
-  const [lastLogin, setLastLogin] = useState('2025-12-25 14:30:00');
-
-  const roleOptions = [
-    {
-      value: 'admin',
-      label: 'Администратор',
-      description: 'Полный доступ ко всем функциям',
-      icon: 'Shield'
-    },
-    {
-      value: 'doctor',
-      label: 'Врач',
-      description: 'Доступ к медицинским записям',
-      icon: 'Stethoscope'
-    },
-    {
-      value: 'accountant',
-      label: 'Бухгалтер',
-      description: 'Доступ к финансовым данным',
-      icon: 'Calculator'
-    }
-  ];
+  const [authError, setAuthError] = useState('');
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors?.[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+    setAuthError('');
   };
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData?.username?.trim()) {
-      newErrors.username = 'Введите имя пользователя или email';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Введите email';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Некорректный формат email';
     }
-
-    if (!formData?.password) {
+    if (!formData.password) {
       newErrors.password = 'Введите пароль';
-    } else if (formData?.password?.length < 6) {
-      newErrors.password = 'Пароль должен содержать минимум 6 символов';
     }
-
-    if (!formData?.role) {
-      newErrors.role = 'Выберите роль';
-    }
-
     setErrors(newErrors);
-    return Object.keys(newErrors)?.length === 0;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleLogin = async (e) => {
     e?.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
+    setAuthError('');
 
-    // Simulate API call
-    setTimeout(() => {
+    const { error } = await signIn(formData.email, formData.password);
+
+    if (error) {
+      setAuthError(error.message || 'Ошибка при входе. Проверьте данные.');
       setLoading(false);
-      // Navigate to dashboard based on role
+    } else {
       navigate('/main-dashboard');
-    }, 1500);
-  };
-
-  const handleForgotPassword = () => {
-    // Navigate to password reset flow
-    alert('Функция восстановления пароля будет реализована');
+    }
   };
 
   return (
@@ -104,7 +70,6 @@ const LoginScreen = () => {
       transition={pageTransition}
     >
       <div className="w-full max-w-md">
-        {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4">
             <Icon name="Activity" size={32} color="white" />
@@ -117,7 +82,6 @@ const LoginScreen = () => {
           </p>
         </div>
 
-        {/* Login Card */}
         <div className="bg-card border border-border rounded-xl shadow-lg p-8">
           <div className="mb-6">
             <h2 className="text-2xl font-heading font-semibold text-foreground mb-2">
@@ -128,27 +92,32 @@ const LoginScreen = () => {
             </p>
           </div>
 
+          {authError && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg flex items-center gap-2">
+              <Icon name="AlertCircle" size={16} />
+              {authError}
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-5">
-            {/* Username/Email */}
             <Input
-              label="Имя пользователя или Email"
-              type="text"
-              placeholder="username@extramed.ru"
-              value={formData?.username}
-              onChange={(e) => handleInputChange('username', e?.target?.value)}
-              error={errors?.username}
+              label="Email"
+              type="email"
+              placeholder="doctor@extramed.ru"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              error={errors.email}
               required
             />
 
-            {/* Password */}
             <div className="relative">
               <Input
                 label="Пароль"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Введите пароль"
-                value={formData?.password}
-                onChange={(e) => handleInputChange('password', e?.target?.value)}
-                error={errors?.password}
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                error={errors.password}
                 required
               />
               <button
@@ -160,45 +129,12 @@ const LoginScreen = () => {
               </button>
             </div>
 
-            {/* Role Selection */}
-            <Select
-              label="Роль"
-              placeholder="Выберите роль"
-              options={roleOptions}
-              value={formData?.role}
-              onChange={(value) => handleInputChange('role', value)}
-              error={errors?.role}
-              required
-            />
-
-            {/* Two-Factor Authentication */}
-            <Checkbox
-              checked={enable2FA}
-              onChange={(e) => setEnable2FA(e?.target?.checked)}
-              label="Включить двухфакторную аутентификацию"
-              description="Дополнительная защита вашей учетной записи"
-            />
-
-            {/* Remember Device */}
             <Checkbox
               checked={rememberDevice}
-              onChange={(e) => setRememberDevice(e?.target?.checked)}
+              onChange={(e) => setRememberDevice(e.target.checked)}
               label="Запомнить это устройство"
-              description="Не запрашивать пароль на этом устройстве 30 дней"
             />
 
-            {/* Forgot Password */}
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-              >
-                Забыли пароль?
-              </button>
-            </div>
-
-            {/* Login Button */}
             <Button
               type="submit"
               fullWidth
@@ -210,7 +146,6 @@ const LoginScreen = () => {
               Войти в систему
             </Button>
 
-            {/* Registration Link */}
             <div className="text-center pt-4 border-t border-border">
               <p className="text-sm text-muted-foreground">
                 Нет учетной записи?{' '}
@@ -224,24 +159,6 @@ const LoginScreen = () => {
               </p>
             </div>
           </form>
-        </div>
-
-        {/* Security Indicators */}
-        <div className="mt-6 space-y-3">
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <Icon name="Lock" size={14} />
-            <span>SSL шифрование активно</span>
-          </div>
-          {lastLogin && (
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <Icon name="Clock" size={14} />
-              <span>Последний вход: {lastLogin}</span>
-            </div>
-          )}
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <Icon name="Shield" size={14} />
-            <span>HIPAA-совместимая система</span>
-          </div>
         </div>
       </div>
     </motion.div>

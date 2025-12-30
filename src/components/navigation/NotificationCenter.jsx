@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import Icon from '../AppIcon';
 import notificationService from '../../services/notificationService';
 
-const NotificationCenter = ({ userRole = 'admin' }) => {
+const NotificationCenter = () => {
+  const { userProfile } = useAuth();
+  const userRole = userProfile?.role || 'admin';
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);

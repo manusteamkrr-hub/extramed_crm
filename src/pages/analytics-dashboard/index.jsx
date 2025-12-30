@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Users, BedDouble, DollarSign, AlertTriangle, TrendingUp, Clock, Zap } from 'lucide-react';
 import Layout from '../../components/navigation/Layout';
+import { useAuth } from '../../contexts/AuthContext';
 import realtimeAnalytics from '../../services/realtimeAnalyticsService';
 
 export default function AnalyticsDashboard() {
+  const { userProfile } = useAuth();
+  const currentRole = userProfile?.role || 'admin';
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

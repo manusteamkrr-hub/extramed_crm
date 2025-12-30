@@ -13,10 +13,12 @@ import KPIWidget from './components/KPIWidget';
 import reportsService from '../../services/reportsService';
 import { pageVariants, pageTransition } from '../../config/animations';
 import Layout from '../../components/navigation/Layout';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ReportsDashboard = () => {
+  const { userProfile } = useAuth();
+  const currentRole = userProfile?.role || 'admin';
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [currentRole, setCurrentRole] = useState('admin');
   const [selectedCategory, setSelectedCategory] = useState('financial');
   const [selectedReport, setSelectedReport] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');

@@ -15,12 +15,14 @@ import { usePagination } from '../../hooks/usePagination';
 import Pagination from '../../components/ui/Pagination';
 import realtimeSyncService from '../../services/realtimeSync';
 import Layout from '../../components/navigation/Layout';
+import { useAuth } from '../../contexts/AuthContext';
 import { pageVariants, pageTransition } from '../../config/animations';
 
 
 export default function InpatientJournal() {
   const navigate = useNavigate();
-  const [currentRole, setCurrentRole] = useState('admin');
+  const { userProfile } = useAuth();
+  const currentRole = userProfile?.role || 'admin';
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedPatients, setSelectedPatients] = useState([]);
   const [filters, setFilters] = useState({});

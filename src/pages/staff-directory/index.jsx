@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Layout from '../../components/navigation/Layout';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -12,7 +14,8 @@ import AddStaffModal from './components/AddStaffModal';
 import realtimeSyncService from '../../services/realtimeSync';
 
 const StaffDirectory = () => {
-  const [currentRole, setCurrentRole] = useState('admin');
+  const { userProfile } = useAuth();
+  const currentRole = userProfile?.role || 'admin';
   const [staff, setStaff] = useState([]);
   const [filteredStaff, setFilteredStaff] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,14 +58,34 @@ const StaffDirectory = () => {
     loadStaffData();
   }, []);
 
-  const loadStaffData = () => {
+  const loadStaffData = async () => {
     try {
-      const staffData = JSON.parse(localStorage.getItem('extramed_staff') || '[]');
-      setStaff(staffData);
-      setFilteredStaff(staffData);
-      setLoading(false);
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('full_name');
+      
+      if (error) throw error;
+
+      const formattedStaff = data.map(s => ({
+        id: s.id,
+        firstName: s.full_name.split(' ')[0] || '',
+        lastName: s.full_name.split(' ')[1] || '',
+        middleName: s.full_name.split(' ')[2] || '',
+        role: s.role,
+        department: s.department,
+        specialty: s.specialization,
+        phone: s.phone,
+        status: 'active', // Default
+        availability: 'available' // Default
+      }));
+
+      setStaff(formattedStaff);
+      setFilteredStaff(formattedStaff);
     } catch (error) {
       console.error('Error loading staff data:', error);
+    } finally {
       setLoading(false);
     }
   };

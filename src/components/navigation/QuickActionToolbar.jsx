@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import Icon from '../AppIcon';
 import Button from '../ui/Button';
 
-const QuickActionToolbar = ({ userRole = 'admin', onActionClick }) => {
+const QuickActionToolbar = ({ onActionClick }) => {
+  const { userProfile } = useAuth();
+  const userRole = userProfile?.role || 'admin';
   const [isExpanded, setIsExpanded] = useState(false);
 
   const quickActions = {

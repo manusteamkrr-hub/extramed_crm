@@ -6,6 +6,7 @@ import QuickAccessShortcuts from './components/QuickAccessShortcuts';
 import SystemHealthIndicator from './components/SystemHealthIndicator';
 import Layout from '../../components/navigation/Layout';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import patientServiceInstance from '../../services/patientService';
 import inpatientService from '../../services/inpatientService';
 import estimateService from '../../services/estimateService';
@@ -15,7 +16,8 @@ import realtimeSyncService from '../../services/realtimeSync';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [currentRole, setCurrentRole] = useState('admin');
+  const { userProfile } = useAuth();
+  const currentRole = userProfile?.role || 'admin';
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);

@@ -23,9 +23,12 @@ export const AuthProvider = ({ children }) => {
       if (!userId) return
       setProfileLoading(true)
       try {
-        const { data, error } = await supabase?.from('user_profiles')?.select('*')?.eq('id', userId)?.single()
-        if (!error) setUserProfile(data)
-      } catch (error) {
+      const { data, error } = await supabase.from('user_profiles').select('*').eq('id', userId).single()
+        if (!error) {
+          setUserProfile(data)
+        } else {
+          console.error('Profile load error:', error)
+        }      } catch (error) {
         console.error('Profile load error:', error)
       } finally {
         setProfileLoading(false)

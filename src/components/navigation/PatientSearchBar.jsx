@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Icon from '../AppIcon';
 import Input from '../ui/Input';
+import patientService from '../../services/patientService';
 
 const PatientSearchBar = ({ onPatientSelect }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -8,16 +9,6 @@ const PatientSearchBar = ({ onPatientSelect }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef(null);
-
-  const mockPatients = [
-    {
-      id: 'P001',
-      name: 'Иванов Иван Иванович',
-      medicalRecordNumber: 'MRN-2025-001',
-      dateOfBirth: '1985-03-15',
-      diagnosis: 'J18.9 - Пневмония неуточненная',
-    },
-  ];
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -33,14 +24,18 @@ const PatientSearchBar = ({ onPatientSelect }) => {
   useEffect(() => {
     if (searchQuery?.length >= 2) {
       setIsSearching(true);
-      const timer = setTimeout(() => {
-        const filtered = mockPatients?.filter(
-          (patient) =>
-            patient?.name?.toLowerCase()?.includes(searchQuery?.toLowerCase()) ||
-            patient?.medicalRecordNumber?.toLowerCase()?.includes(searchQuery?.toLowerCase()) ||
-            patient?.diagnosis?.toLowerCase()?.includes(searchQuery?.toLowerCase())
-        );
-        setSearchResults(filtered);
+      const timer = setTimeout(async () => {
+        const result = await patientService.getPatients();
+        if (result.success) {
+          const query = searchQuery.toLowerCase();
+          const filtered = result.data.filter(
+            (patient) =>
+              patient.name?.toLowerCase().includes(query) ||
+              patient.medical_record_number?.toLowerCase().includes(query) ||
+              patient.diagnosis?.toLowerCase().includes(query)
+          );
+          setSearchResults(filtered);
+        }
         setIsSearching(false);
         setShowResults(true);
       }, 300);
@@ -60,7 +55,13 @@ const PatientSearchBar = ({ onPatientSelect }) => {
     setSearchQuery('');
     setShowResults(false);
     if (onPatientSelect) {
-      onPatientSelect(patient);
+      onPatientSelect({
+        id: patient.id,
+        name: patient.name,
+        medicalRecordNumber: patient.medical_record_number,
+        dateOfBirth: patient.date_of_birth,
+        diagnosis: patient.diagnosis
+      });
     }
   };
 
@@ -114,7 +115,7 @@ const PatientSearchBar = ({ onPatientSelect }) => {
                           {patient?.name}
                         </p>
                         <p className="text-sm caption text-muted-foreground mt-1">
-                          {patient?.medicalRecordNumber} • {patient?.dateOfBirth}
+                          {patient?.medical_record_number} • {patient?.date_of_birth}
                         </p>
                         <p className="text-sm caption text-muted-foreground mt-1 truncate">
                           {patient?.diagnosis}

@@ -1,11 +1,12 @@
 import React from 'react';
 import PatientSearchBar from './PatientSearchBar';
 import NotificationCenter from './NotificationCenter';
-import RoleIndicator from './RoleIndicator';
+import { useAuth } from '../../contexts/AuthContext';
 import QuickActionToolbar from './QuickActionToolbar';
 import Icon from '../AppIcon';
 
 const Header = ({ userRole = 'admin', onPatientSelect, onRoleChange, onActionClick }) => {
+  const { signOut, userProfile } = useAuth();
   const handleThemeToggle = () => {
     const isDark = document.documentElement?.classList?.contains('dark');
     if (isDark) {
@@ -39,7 +40,19 @@ const Header = ({ userRole = 'admin', onPatientSelect, onRoleChange, onActionCli
 
           <NotificationCenter userRole={userRole} />
 
-          <RoleIndicator currentRole={userRole} onRoleChange={onRoleChange} />
+          <div className="flex items-center gap-2 ml-2">
+            <div className="hidden md:block text-right mr-2">
+              <p className="text-sm font-medium text-foreground">{userProfile?.full_name}</p>
+              <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
+            </div>
+            <button
+              onClick={() => signOut()}
+              className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-smooth"
+              title="Выйти"
+            >
+              <Icon name="LogOut" size={20} />
+            </button>
+          </div>
         </div>
       </div>
     </header>

@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
-const Layout = ({ children, userRole = 'admin', onRoleChange }) => {
+const Layout = ({ children, onRoleChange }) => {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
+  const userRole = userProfile?.role || 'admin';
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const handleToggleSidebar = () => {

@@ -15,11 +15,13 @@ import patientService from '../../services/patientService';
 import estimateService from '../../services/estimateService';
 import { pageVariants, pageTransition } from '../../config/animations';
 import Layout from '../../components/navigation/Layout';
+import { useAuth } from '../../contexts/AuthContext';
 
 const EstimateCreationAndManagement = () => {
   const location = useLocation();
+  const { userProfile } = useAuth();
+  const currentRole = userProfile?.role || 'admin';
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [currentRole, setCurrentRole] = useState('admin');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [estimates, setEstimates] = useState([]);
   const [activeEstimateId, setActiveEstimateId] = useState(null);

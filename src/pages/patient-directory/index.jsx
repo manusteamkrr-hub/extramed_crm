@@ -13,11 +13,14 @@ import BulkActionsBar from './components/BulkActionsBar';
 import ExportModal from './components/ExportModal';
 import PatientRegistrationModal from './components/PatientRegistrationModal';
 import Layout from '../../components/navigation/Layout';
+import { useAuth } from '../../contexts/AuthContext';
 import { pageVariants, pageTransition } from '../../config/animations';
 import realtimeSyncService from '../../services/realtimeSync';
 
 export default function PatientDirectory() {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
+  const currentRole = userProfile?.role || 'admin';
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [selectedPatients, setSelectedPatients] = useState([]);
@@ -30,7 +33,6 @@ export default function PatientDirectory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [pageSize, setPageSize] = useState(25);
-  const [currentRole, setCurrentRole] = useState('admin');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 

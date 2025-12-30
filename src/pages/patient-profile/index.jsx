@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import Layout from '../../components/navigation/Layout';
 
 
 
@@ -20,8 +22,9 @@ import realtimeSyncService from '../../services/realtimeSync';
 export default function PatientProfile() {
   const location = useLocation();
   const { patientId: urlPatientId } = useParams();
+  const { userProfile } = useAuth();
+  const currentRole = userProfile?.role || 'admin';
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [currentRole, setCurrentRole] = useState('admin');
   const [activeTab, setActiveTab] = useState('demographics');
   const [patient, setPatient] = useState(null);
   const [medicalHistory, setMedicalHistory] = useState(null);

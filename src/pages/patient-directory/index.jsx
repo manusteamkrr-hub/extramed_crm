@@ -31,7 +31,8 @@ export default function PatientDirectory() {
   const [databaseStatus, setDatabaseStatus] = useState('checking');
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
-  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
+  const location = useLocation();
+  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(location?.state?.fromInpatientJournal || false);
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
@@ -283,6 +284,10 @@ export default function PatientDirectory() {
     await loadPatients();
     setSelectedPatients([]);
     alert(`Пациент ${newPatient?.lastName || ''} ${newPatient?.firstName || ''} успешно зарегистрирован!`);
+    // Дополнительная логика для перенаправления в журнал стационара, если пациент был создан оттуда
+    if (location?.state?.fromInpatientJournal) {
+      navigate('/inpatient-journal', { replace: true });
+    }
   };
 
   const handleRoleChange = (newRole) => {

@@ -17,10 +17,11 @@ import StaffDirectory from './pages/staff-directory';
 import AnalyticsDashboard from "./pages/analytics-dashboard";
 
 // Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, userProfile, loading, profileLoading } = useAuth();
 
-  if (loading) {
+  // Ждем загрузки сессии И профиля пользователя (так как роль хранится в профиле)
+  if (loading || profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -28,8 +29,16 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
+  // Если пользователь не авторизован — на страницу логина
   if (!user) {
     return <Navigate to="/login-screen" replace />;
+  }
+
+  // Если указаны разрешенные роли, проверяем роль текущего пользователя
+  const userRole = userProfile?.role;
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
+    // Перенаправляем на главную панель, если доступа нет
+    return <Navigate to="/main-dashboard" replace />;
   }
 
   return children;
@@ -47,52 +56,52 @@ export default function Routes() {
 
           {/* Protected Routes */}
           <Route path="/" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'doctor', 'accountant']}>
               <MainDashboard />
             </ProtectedRoute>
           } />
           <Route path="/main-dashboard" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'doctor', 'accountant']}>
               <MainDashboard />
             </ProtectedRoute>
           } />
           <Route path="/patient-profile" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'doctor']}>
               <PatientProfile />
             </ProtectedRoute>
           } />
           <Route path="/patient-profile/:patientId" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'doctor']}>
               <PatientProfile />
             </ProtectedRoute>
           } />
           <Route path="/estimate-creation-and-management" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
               <EstimateCreationAndManagement />
             </ProtectedRoute>
           } />
           <Route path="/reports-dashboard" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
               <ReportsDashboard />
             </ProtectedRoute>
           } />
           <Route path="/inpatient-journal" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'doctor']}>
               <InpatientJournal />
             </ProtectedRoute>
           } />
           <Route path="/patient-directory" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'doctor']}>
               <PatientDirectory />
             </ProtectedRoute>
           } />
           <Route path="/staff-directory" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin']}>
               <StaffDirectory />
             </ProtectedRoute>
           } />
           <Route path="/analytics-dashboard" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'accountant']}>
               <AnalyticsDashboard />
             </ProtectedRoute>
           } />

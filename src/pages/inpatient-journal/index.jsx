@@ -507,7 +507,7 @@ export default function InpatientJournal() {
                         size="default"
                         iconName="UserPlus"
                         iconPosition="left"
-                        onClick={() => navigate('/patient-directory')}
+                        onClick={() => navigate('/patient-directory', { state: { fromInpatientJournal: true } })}
                       >
                         Добавить пациента
                       </Button>

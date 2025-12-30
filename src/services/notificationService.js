@@ -57,6 +57,34 @@ const NotificationService = {
     } catch (error) {
       return { success: false, error: error.message };
     }
+  },
+
+  async getUrgentNotifications() {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('type', 'urgent')
+        .eq('read', false)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('Error fetching urgent notifications:', error);
+      return { success: false, data: [], error: error.message };
+    }
+  },
+
+  async getSystemHealth() {
+    try {
+      // Simple health check by querying a table
+      const { error } = await supabase.from('user_profiles').select('id').limit(1);
+      return { success: !error, status: error ? 'degraded' : 'healthy' };
+    } catch (error) {
+      return { success: false, status: 'error' };
+    }
   }
 };
 

@@ -37,11 +37,12 @@ const patientService = {
       // Generate MRN if not provided
       const mrn = patientData.medicalRecordNumber || this.generateMRN();
       
+      // Ensure we use the camelCase key for the MRN to match the database column
       const { data, error } = await supabase
         .from('patients')
         .insert([{
           ...patientData,
-          medicalRecordNumber: mrn,
+          "medicalRecordNumber": mrn,
           updated_at: new Date().toISOString()
         }])
         .select()

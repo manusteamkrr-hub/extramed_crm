@@ -67,7 +67,7 @@ const estimateService = {
         paid_amount: estimateData.paidAmount,
         payment_method: estimateData.paymentMethod,
         status: estimateData.paymentStatus,
-        insurance_type: estimateData.insuranceType,
+        // insurance_type: estimateData.insuranceType, // Column missing in DB
         number: estimateData.number,
         created_at: estimateData.createdAt || new Date().toISOString(),
         updated_at: new Date().toISOString()

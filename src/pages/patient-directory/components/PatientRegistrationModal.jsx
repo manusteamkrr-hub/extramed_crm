@@ -3,8 +3,10 @@ import { X, User, Phone, AlertCircle } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import patientService from '../../../services/patientService';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function PatientRegistrationModal({ isOpen, onClose, onSuccess }) {
+  const { userProfile } = useAuth();
   const [formData, setFormData] = useState({
     lastName: '',
     firstName: '',
@@ -96,7 +98,10 @@ export default function PatientRegistrationModal({ isOpen, onClose, onSuccess })
     setIsSubmitting(true);
 
     try {
-      const result = await patientService?.createPatient(formData);
+      const result = await patientService?.createPatient({
+        ...formData,
+        attendingPhysicianId: userProfile?.id
+      });
 
       if (result?.success) {
         // ✅ ADD: Trigger dashboard refresh event

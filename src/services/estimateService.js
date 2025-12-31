@@ -57,14 +57,27 @@ const estimateService = {
     }
   },
 
-  async createEstimate(estimateData) {
+    async createEstimate(estimateData) {
     try {
+      // Map frontend fields to database columns
+      const dbData = {
+        patient_id: estimateData.patientId,
+        services: estimateData.services,
+        total_amount: estimateData.totalAmount,
+        paid_amount: estimateData.paidAmount,
+        payment_method: estimateData.paymentMethod,
+        status: estimateData.paymentStatus,
+        insurance_type: estimateData.insuranceType,
+        number: estimateData.number,
+        created_at: estimateData.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('estimates')
-        .insert([estimateData])
+        .insert([dbData])
         .select()
         .single();
-
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -72,7 +85,6 @@ const estimateService = {
       return { success: false, data: null, error: error.message };
     }
   },
-
   async updateEstimate(id, updates) {
     try {
       const { data, error } = await supabase
@@ -98,6 +110,20 @@ const estimateService = {
     } catch (error) {
       console.error('Error deleting estimate:', error);
       return { success: false, error: error.message };
+    }
+  },
+  async getEstimatesByPatient(patientId) {
+    try {
+      const { data, error } = await supabase
+        .from('estimates')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('Error fetching estimates by patient:', error);
+      return { success: false, data: [], error: error.message };
     }
   },
 };

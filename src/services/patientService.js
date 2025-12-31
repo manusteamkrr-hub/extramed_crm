@@ -37,14 +37,30 @@ const patientService = {
       // Generate MRN if not provided
       const mrn = patientData.medicalRecordNumber || this.generateMRN();
       
-      // Ensure we use the camelCase key for the MRN to match the database column
+      // Map frontend fields to database columns
+      const dbData = {
+        medical_record_number: mrn,
+        name: `${patientData.lastName || ''} ${patientData.firstName || ''} ${patientData.middleName || ''}`.trim(),
+        date_of_birth: patientData.dateOfBirth,
+        gender: patientData.gender,
+        phone: patientData.phone,
+        email: patientData.email,
+        address: `${patientData.city || ''}, ${patientData.address || ''}`,
+        passport_series: patientData.passportSeries,
+        passport_number: patientData.passportNumber,
+        insurance_company: patientData.insuranceCompany,
+        insurance_policy: patientData.insurancePolicy,
+        diagnosis: patientData.allergies,
+        status: 'active',
+        emergency_contact: patientData.emergencyContactName,
+        emergency_phone: patientData.emergencyContactPhone,
+        attending_physician_id: patientData.attendingPhysicianId || null,
+        updated_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('patients')
-        .insert([{
-          ...patientData,
-          "medicalRecordNumber": mrn,
-          updated_at: new Date().toISOString()
-        }])
+        .insert([dbData])
         .select()
         .single();
 

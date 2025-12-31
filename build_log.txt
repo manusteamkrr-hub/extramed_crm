@@ -1,0 +1,20 @@
+
+> extramed-crm@0.1.0 build
+> vite build --sourcemap
+
+vite v5.0.0 building for production...
+
+Mixed async and defer script modules in /var/www/extramed_crm/index.html, output script will fallback to defer. Every script, including inline ones, need to be marked as async for your output script to be async.
+transforming...
+✓ 3648 modules transformed.
+rendering chunks...
+computing gzip size...
+build/index.html                     0.99 kB │ gzip:   0.52 kB
+build/assets/index-DbjIVqBA.css     46.94 kB │ gzip:   8.80 kB
+build/assets/index-DUe9hxJ4.js   3,235.63 kB │ gzip: 600.18 kB │ map: 7,250.78 kB
+
+(!) Some chunks are larger than 2000 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 42.65s

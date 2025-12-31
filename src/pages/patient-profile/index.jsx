@@ -75,7 +75,18 @@ export default function PatientProfile() {
     loadPatientData();
   }, [patientId]);
 
-  const loadPatientData = async () => {
+  
+      const calculateAge = (dob) => {
+        const birthDate = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        return age;
+      };
+const loadPatientData = async () => {
     setLoading(true);
 
     const patientResult = await patientService?.getPatientById(patientId);
@@ -87,7 +98,7 @@ export default function PatientProfile() {
         photo: p?.photo || "https://img.rocket.new/generatedImages/rocket_gen_img_10c48cdd0-1763299750352.png",
         photoAlt: p?.photo_alt || 'Patient photo',
         dateOfBirth: p?.date_of_birth,
-        age: p?.age,
+        age: p?.age || calculateAge(p?.date_of_birth),
         gender: p?.gender,
         phone: p?.phone,
         email: p?.email,
@@ -375,6 +386,7 @@ export default function PatientProfile() {
   };
 
   return (
+    <Layout>
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         <PatientHeader patient={displayPatient} onEdit={handlePatientEdit} />
@@ -453,6 +465,6 @@ export default function PatientProfile() {
           </div>
         </div>
       </div>
-    </div>);
-
+    </div>
+    </Layout>);
 }

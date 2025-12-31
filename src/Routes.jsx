@@ -45,6 +45,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 export default function Routes() {
+  const { user, loading } = useAuth();
+
   return (
     <BrowserRouter>
       <ErrorBoundary>
@@ -54,12 +56,20 @@ export default function Routes() {
           <Route path="/login-screen" element={<LoginScreen />} />
           <Route path="/registration-screen" element={<RegistrationScreen />} />
 
-          {/* Protected Routes */}
+          {/* Root Redirect */}
           <Route path="/" element={
-            <ProtectedRoute allowedRoles={['admin', 'doctor', 'accountant']}>
-              <MainDashboard />
-            </ProtectedRoute>
+            loading ? (
+              <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : user ? (
+              <Navigate to="/main-dashboard" replace />
+            ) : (
+              <Navigate to="/login-screen" replace />
+            )
           } />
+
+          {/* Protected Routes */}
           <Route path="/main-dashboard" element={
             <ProtectedRoute allowedRoles={['admin', 'doctor', 'accountant']}>
               <MainDashboard />

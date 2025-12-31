@@ -52,15 +52,18 @@ const RegistrationScreen = () => {
 
   const validateStep = (step) => {
     const newErrors = {};
-    if (step === 1) {
+      if (step === 1) {
       if (!formData.fullName.trim()) newErrors.fullName = 'Введите полное имя';
       if (!formData.email.trim()) newErrors.email = 'Введите email';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Некорректный формат email';
       if (!formData.phone.trim()) newErrors.phone = 'Введите номер телефона';
+      // if (!verificationStatus.email) newErrors.email = 'Необходимо подтвердить email';
+      // if (!verificationStatus.phone) newErrors.phone = 'Необходимо подтвердить телефон';
     } else if (step === 2) {
       if (!formData.licenseNumber.trim()) newErrors.licenseNumber = 'Введите номер лицензии';
       if (!formData.department.trim()) newErrors.department = 'Выберите отделение';
       if (!formData.specialization.trim()) newErrors.specialization = 'Выберите специализацию';
+      // if (!verificationStatus.license) newErrors.licenseNumber = 'Необходимо подтвердить лицензию';
     } else if (step === 3) {
       if (!formData.role) newErrors.role = 'Выберите роль';
     } else if (step === 4) {
